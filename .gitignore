@@ -1,0 +1,40 @@
+# Logs & Environment
+*.log
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node / Web
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Go / Server
+server/bin/
+server/tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Database / Docker Volumes
+pgdata/
+data/
+
+# Worktrees & Scratch
+.temp/
+*.tmp
