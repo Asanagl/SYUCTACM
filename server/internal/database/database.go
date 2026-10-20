@@ -14,11 +14,23 @@ import (
 var DB *gorm.DB
 
 func Init(databaseURL string) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
-	})
+	var db *gorm.DB
+	var err error
+
+	// Retry connecting up to 10 times with 2s interval for reboot resilience
+	for i := 1; i <= 10; i++ {
+		db, err = gorm.Open(postgres.Open(databaseURL), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Warn),
+		})
+		if err == nil {
+			break
+		}
+		log.Printf("[Database] Connecting to PostgreSQL (attempt %d/10): %v", i, err)
+		time.Sleep(2 * time.Second)
+	}
+
 	if err != nil {
-		log.Printf("[Database] Warning: failed to connect to PostgreSQL: %v", err)
+		log.Printf("[Database] Warning: failed to connect to PostgreSQL after retries: %v", err)
 		return nil, err
 	}
 
