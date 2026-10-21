@@ -1,33 +1,27 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Navbar } from './components/Navbar'
-import { Hero } from './components/Hero'
-import { CentralHub } from './components/CentralHub'
-import { ArticleStream } from './components/ArticleStream'
-import { Footer } from './components/Footer'
-import { ArticleDetailModal } from './components/ArticleDetailModal'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom'
+import { SiteHeader } from './layout/SiteHeader'
+import { SiteFooter } from './layout/SiteFooter'
+import { HomePage } from './pages/HomePage'
+import { ArticlePage } from './pages/ArticlePage'
+import { WikiListPage } from './pages/WikiListPage'
+import { WikiPageView } from './pages/WikiPageView'
+import { WikiEditPage } from './pages/WikiEditPage'
+import { WikiHistoryPage } from './pages/WikiHistoryPage'
+import { WikiRevisionPage } from './pages/WikiRevisionPage'
 import { ArticleEditModal } from './components/ArticleEditModal'
 import { AuthModal } from './components/AuthModal'
 import { RecruitModal, HonorsModal, CalendarModal, LinksModal } from './components/InfoModals'
-import {
-  fetchArticles,
-  fetchMe,
-  createArticle,
-  updateArticle,
-  deleteArticle,
-  clearToken,
-  getToken,
-} from './api/client'
+import { clearToken, createArticle, fetchMe, getToken, updateArticle } from './api/client'
 import type { Article, User } from './types'
 
-export function App() {
+function SiteShell() {
+  const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
-  const [articles, setArticles] = useState<Article[]>([])
-  const [loading, setLoading] = useState(true)
-  const [currentCategory, setCurrentCategory] = useState<string>('')
 
   // Modals state
-  const [readingArticle, setReadingArticle] = useState<Article | null>(null)
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
+  const [editModalKey, setEditModalKey] = useState(0)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isRecruitOpen, setIsRecruitOpen] = useState(false)
@@ -37,66 +31,32 @@ export function App() {
 
   // Load user profile if token exists
   useEffect(() => {
-    if (getToken()) {
-      fetchMe()
-        .then((res) => setUser(res.user))
-        .catch(() => clearToken())
+    if (!getToken()) return
+    let cancelled = false
+    fetchMe()
+      .then((res) => {
+        if (!cancelled) setUser(res.user)
+      })
+      .catch(() => clearToken())
+    return () => {
+      cancelled = true
     }
   }, [])
 
-  // Load articles
-  const loadArticles = useCallback(async (cat: string) => {
-    setLoading(true)
-    try {
-      const res = await fetchArticles(cat)
-      setArticles(res.items || [])
-    } catch (err) {
-      console.error('Failed to load articles:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadArticles(currentCategory)
-  }, [currentCategory, loadArticles])
-
-  // Handlers
-  const handleNavigateSection = (sectionId: string) => {
-    if (sectionId === 'heritage') {
-      setCurrentCategory('senior')
-      const el = document.getElementById('articles')
-      el?.scrollIntoView({ behavior: 'smooth' })
-      return
-    }
-    const el = document.getElementById(sectionId)
-    el?.scrollIntoView({ behavior: 'smooth' })
+  const handleNavigateArticles = (category?: string) => {
+    navigate('/', { state: { category: category ?? '', scrollToArticles: true } })
   }
 
-  const handleSelectCategory = (cat: string) => {
-    setCurrentCategory(cat)
-    const el = document.getElementById('articles')
-    el?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  const handleCreateArticle = () => {
+  const openCreateArticle = () => {
     setEditingArticle(null)
+    setEditModalKey((k) => k + 1)
     setIsEditModalOpen(true)
   }
 
-  const handleEditArticle = (article: Article) => {
+  const openEditArticle = (article: Article) => {
     setEditingArticle(article)
+    setEditModalKey((k) => k + 1)
     setIsEditModalOpen(true)
-  }
-
-  const handleDeleteArticle = async (id: number) => {
-    if (!window.confirm('确定要删除这篇内容吗？此操作不可逆。')) return
-    try {
-      await deleteArticle(id)
-      await loadArticles(currentCategory)
-    } catch (err) {
-      alert(err instanceof Error ? err.message : '删除失败')
-    }
   }
 
   const handleSaveArticle = async (data: {
@@ -112,65 +72,50 @@ export function App() {
     } else {
       await createArticle(data)
     }
-    await loadArticles(currentCategory)
   }
 
   const handleLogout = () => {
     clearToken()
     setUser(null)
+    navigate('/')
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b141d] text-slate-100 antialiased selection:bg-teal-600 selection:text-white">
-      {/* Navbar */}
-      <Navbar
+    <div className="min-h-screen flex flex-col bg-white text-gray-800 antialiased">
+      <SiteHeader
         user={user}
         onOpenAuth={() => setIsAuthModalOpen(true)}
-        onOpenCreateArticle={handleCreateArticle}
+        onOpenCreateArticle={openCreateArticle}
         onLogout={handleLogout}
-        onNavigateSection={handleNavigateSection}
+        onNavigateArticles={handleNavigateArticles}
       />
 
-      {/* Main Flow */}
-      <main className="flex-1 flex flex-col">
-        {/* Hero Section */}
-        <div id="hero">
-          <Hero onLearnMore={() => handleNavigateSection('hub')} />
+      <main className="flex-1 w-full">
+        <div className="max-w-[880px] mx-auto px-5">
+          <Routes>
+            <Route path="/" element={<HomePage user={user} onEditArticle={openEditArticle} />} />
+            <Route path="/article/:id" element={<ArticlePage />} />
+            <Route path="/wiki" element={<WikiListPage user={user} />} />
+            <Route path="/wiki/new" element={<WikiEditPage user={user} />} />
+            <Route path="/wiki/:id" element={<WikiPageView user={user} />} />
+            <Route path="/wiki/:id/edit" element={<WikiEditPage user={user} />} />
+            <Route path="/wiki/:id/history" element={<WikiHistoryPage user={user} />} />
+            <Route path="/wiki/:id/revisions/:rid" element={<WikiRevisionPage />} />
+            <Route path="*" element={<HomePage user={user} onEditArticle={openEditArticle} />} />
+          </Routes>
         </div>
-
-        {/* Central 3-Column Hub */}
-        <CentralHub
-          onSelectCategory={(cat) => handleSelectCategory(cat)}
-          onOpenRecruit={() => setIsRecruitOpen(true)}
-          onOpenHonors={() => setIsHonorsOpen(true)}
-          onOpenCalendar={() => setIsCalendarOpen(true)}
-          onOpenLinks={() => setIsLinksOpen(true)}
-        />
-
-        {/* Latest Articles Stream */}
-        <ArticleStream
-          articles={articles}
-          loading={loading}
-          currentCategory={currentCategory}
-          user={user}
-          onSelectCategory={handleSelectCategory}
-          onReadArticle={(a) => setReadingArticle(a)}
-          onEditArticle={handleEditArticle}
-          onDeleteArticle={handleDeleteArticle}
-          onCreateArticle={handleCreateArticle}
-        />
       </main>
 
-      {/* Footer */}
-      <Footer />
-
-      {/* Modals */}
-      <ArticleDetailModal
-        article={readingArticle}
-        onClose={() => setReadingArticle(null)}
+      <SiteFooter
+        onOpenRecruit={() => setIsRecruitOpen(true)}
+        onOpenHonors={() => setIsHonorsOpen(true)}
+        onOpenCalendar={() => setIsCalendarOpen(true)}
+        onOpenLinks={() => setIsLinksOpen(true)}
       />
 
+      {/* Modals：key 保证每次打开时表单状态按 article 重新初始化 */}
       <ArticleEditModal
+        key={editModalKey}
         article={editingArticle}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -188,6 +133,14 @@ export function App() {
       <CalendarModal isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
       <LinksModal isOpen={isLinksOpen} onClose={() => setIsLinksOpen(false)} />
     </div>
+  )
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <SiteShell />
+    </BrowserRouter>
   )
 }
 

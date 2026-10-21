@@ -9,6 +9,39 @@ export interface User {
   major?: string
 }
 
+export interface WikiPageSummary {
+  id: number
+  title: string
+  created_by: string
+  updated_by: string
+  created_at: string
+  updated_at: string
+  revision_count: number
+}
+
+export interface WikiPage extends WikiPageSummary {
+  content: string
+}
+
+export interface WikiRevision {
+  id: number
+  page_id: number
+  title: string
+  editor: string
+  created_at: string
+}
+
+export interface WikiRevisionDetail extends WikiRevision {
+  content: string
+}
+
+export interface PagedResult<T> {
+  total: number
+  page?: number
+  page_size?: number
+  items: T[]
+}
+
 export interface Article {
   id: number
   title: string
