@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchWikiPage } from '../api/client'
 import { MarkdownContent } from '../components/MarkdownContent'
 import { formatDateTime } from '../lib/format'
+import { canWrite } from '../lib/permissions'
 import type { User, WikiPage } from '../types'
 
 interface WikiPageViewProps {
@@ -64,7 +65,7 @@ export function WikiPageView({ user }: WikiPageViewProps) {
             <span className="before:content-[' · ']">共 {page.revision_count} 次修订</span>
           </div>
           <div className="flex gap-2">
-            {user && (
+            {canWrite(user) && (
               <button
                 onClick={() => navigate(`/wiki/${page.id}/edit`)}
                 className="text-[12.5px] px-3 py-0.5 border border-gray-200 rounded bg-gray-50 text-gray-700 hover:border-[#0f766e] hover:text-[#0f766e] transition-colors cursor-pointer"

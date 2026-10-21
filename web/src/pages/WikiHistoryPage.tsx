@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchWikiPage, fetchWikiRevisions, revertWikiPage } from '../api/client'
 import { formatDateTime } from '../lib/format'
+import { canWrite } from '../lib/permissions'
 import type { User, WikiRevision } from '../types'
 
 interface WikiHistoryPageProps {
@@ -90,7 +91,7 @@ export function WikiHistoryPage({ user }: WikiHistoryPageProps) {
                 >
                   查看
                 </button>
-                {user && (
+                {canWrite(user) && (
                   <button
                     onClick={() => handleRevert(rev.id)}
                     disabled={revertingId !== null}

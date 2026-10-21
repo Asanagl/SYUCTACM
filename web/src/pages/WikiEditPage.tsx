@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { createWikiPage, fetchWikiPage, updateWikiPage } from '../api/client'
+import { canWrite } from '../lib/permissions'
 import type { User } from '../types'
 
 interface WikiEditPageProps {
@@ -41,7 +42,8 @@ export function WikiEditPage({ user }: WikiEditPageProps) {
     }
   }, [id, isNew])
 
-  if (!user) {
+  if (!canWrite(user)) {
+    // 未登录与 guest 均无写权限，统一跳回 Wiki 列表
     return <Navigate to="/wiki" replace />
   }
 

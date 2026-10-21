@@ -22,6 +22,7 @@ function SiteShell() {
   // Modals state
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
   const [editModalKey, setEditModalKey] = useState(0)
+  const [articlesRefreshKey, setArticlesRefreshKey] = useState(0)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isRecruitOpen, setIsRecruitOpen] = useState(false)
@@ -72,6 +73,7 @@ function SiteShell() {
     } else {
       await createArticle(data)
     }
+    setArticlesRefreshKey((k) => k + 1)
   }
 
   const handleLogout = () => {
@@ -93,7 +95,16 @@ function SiteShell() {
       <main className="flex-1 w-full">
         <div className="max-w-[880px] mx-auto px-5">
           <Routes>
-            <Route path="/" element={<HomePage user={user} onEditArticle={openEditArticle} />} />
+            <Route
+              path="/"
+              element={
+                <HomePage
+                  user={user}
+                  onEditArticle={openEditArticle}
+                  refreshKey={articlesRefreshKey}
+                />
+              }
+            />
             <Route path="/article/:id" element={<ArticlePage />} />
             <Route path="/wiki" element={<WikiListPage user={user} />} />
             <Route path="/wiki/new" element={<WikiEditPage user={user} />} />
@@ -101,7 +112,16 @@ function SiteShell() {
             <Route path="/wiki/:id/edit" element={<WikiEditPage user={user} />} />
             <Route path="/wiki/:id/history" element={<WikiHistoryPage user={user} />} />
             <Route path="/wiki/:id/revisions/:rid" element={<WikiRevisionPage />} />
-            <Route path="*" element={<HomePage user={user} onEditArticle={openEditArticle} />} />
+            <Route
+              path="*"
+              element={
+                <HomePage
+                  user={user}
+                  onEditArticle={openEditArticle}
+                  refreshKey={articlesRefreshKey}
+                />
+              }
+            />
           </Routes>
         </div>
       </main>

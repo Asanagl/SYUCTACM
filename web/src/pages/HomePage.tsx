@@ -23,6 +23,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 interface HomePageProps {
   user: User | null
   onEditArticle: (article: Article) => void
+  refreshKey: number
 }
 
 interface ArticlesLocationState {
@@ -30,7 +31,7 @@ interface ArticlesLocationState {
   scrollToArticles?: boolean
 }
 
-export function HomePage({ user, onEditArticle }: HomePageProps) {
+export function HomePage({ user, onEditArticle, refreshKey }: HomePageProps) {
   const location = useLocation()
   const [category, setCategory] = useState<string>(
     () => (location.state as ArticlesLocationState | null)?.category ?? ''
@@ -70,7 +71,7 @@ export function HomePage({ user, onEditArticle }: HomePageProps) {
     return () => {
       cancelled = true
     }
-  }, [category])
+  }, [category, refreshKey])
 
   // 「最新文章 / 薪火相传」导航跳转后滚动到文章区块
   useEffect(() => {

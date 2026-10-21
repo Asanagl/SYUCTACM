@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { fetchWikiPages } from '../api/client'
 import { formatDateTime } from '../lib/format'
+import { canWrite } from '../lib/permissions'
 import type { User, WikiPageSummary } from '../types'
 
 interface WikiListPageProps {
@@ -41,7 +42,7 @@ export function WikiListPage({ user }: WikiListPageProps) {
         <h2 className="inline-block text-xl pb-1.5 border-b-2 border-gray-800 font-semibold">
           Wiki
         </h2>
-        {user && (
+        {canWrite(user) && (
           <Link
             to="/wiki/new"
             className="inline-flex items-center gap-1 text-[13px] px-3 py-1 rounded border border-[#0f766e] text-[#0f766e] hover:bg-[#0f766e] hover:text-white hover:no-underline transition-colors"
@@ -61,7 +62,7 @@ export function WikiListPage({ user }: WikiListPageProps) {
         <div className="py-14 text-center text-gray-400 text-sm">{error}</div>
       ) : pages.length === 0 ? (
         <div className="py-14 text-center text-gray-400 text-sm">
-          暂无 Wiki 页面{user ? '，点击右上角「新建页面」创建第一篇' : '，登录后可创建'}
+          暂无 Wiki 页面{canWrite(user) ? '，点击右上角「新建页面」创建第一篇' : ''}
         </div>
       ) : (
         <ul className="list-none">
