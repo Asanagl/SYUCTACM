@@ -12,8 +12,8 @@ import (
 )
 
 type WikiPageReq struct {
-	Title   string `json:"title" binding:"required"`
-	Content string `json:"content" binding:"required"`
+	Title   string `json:"title" binding:"required,max=200"`
+	Content string `json:"content" binding:"required,max=200000"`
 }
 
 type wikiPageListItem struct {
@@ -103,8 +103,12 @@ func CreateWikiPage(c *gin.Context) {
 		return
 	}
 
-	usernameVal, _ := c.Get("username")
-	username := usernameVal.(string)
+	usernameVal, exists := c.Get("username")
+	username, ok := usernameVal.(string)
+	if !exists || !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取当前用户信息失败"})
+		return
+	}
 
 	wikiPage := model.WikiPage{
 		Title:         req.Title,
@@ -153,15 +157,19 @@ func UpdateWikiPage(c *gin.Context) {
 		return
 	}
 
-	usernameVal, _ := c.Get("username")
-	username := usernameVal.(string)
+	usernameVal, exists := c.Get("username")
+	username, ok := usernameVal.(string)
+	if !exists || !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取当前用户信息失败"})
+		return
+	}
 
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&wikiPage).Updates(map[string]interface{}{
 			"title":          req.Title,
 			"content":        req.Content,
 			"updated_by":     username,
-			"revision_count": wikiPage.RevisionCount + 1,
+			"revision_count": gorm.Expr("revision_count + 1"),
 		}).Error; err != nil {
 			return err
 		}
@@ -270,15 +278,19 @@ func RevertWikiPage(c *gin.Context) {
 		return
 	}
 
-	usernameVal, _ := c.Get("username")
-	username := usernameVal.(string)
+	usernameVal, exists := c.Get("username")
+	username, ok := usernameVal.(string)
+	if !exists || !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取当前用户信息失败"})
+		return
+	}
 
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&wikiPage).Updates(map[string]interface{}{
 			"title":          revision.Title,
 			"content":        revision.Content,
 			"updated_by":     username,
-			"revision_count": wikiPage.RevisionCount + 1,
+			"revision_count": gorm.Expr("revision_count + 1"),
 		}).Error; err != nil {
 			return err
 		}
