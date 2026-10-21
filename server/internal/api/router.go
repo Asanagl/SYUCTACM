@@ -28,6 +28,13 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 		api.GET("/wiki/:id/revisions", handler.ListWikiRevisions)
 		api.GET("/wiki/:id/revisions/:rid", handler.GetWikiRevision)
 
+		// Public surveys (optional auth)
+		api.GET("/surveys", middleware.OptionalAuth(cfg.JWTSecret), handler.ListSurveys)
+		api.GET("/surveys/:id", middleware.OptionalAuth(cfg.JWTSecret), handler.GetSurvey)
+
+		// Survey submit: 公开问卷允许匿名（OptionalAuth），非公开问卷在 handler 内要求登录
+		api.POST("/surveys/:id/submit", middleware.OptionalAuth(cfg.JWTSecret), handler.SubmitSurvey)
+
 		// Auth
 		api.POST("/auth/register", handler.Register(cfg.JWTSecret))
 		api.POST("/auth/login", handler.Login(cfg.JWTSecret))
@@ -37,6 +44,7 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 		userAuth.Use(middleware.Auth(cfg.JWTSecret))
 		{
 			userAuth.GET("/auth/me", handler.GetMe)
+			userAuth.GET("/surveys/:id/my", handler.GetMySurveySubmission)
 		}
 
 		// Protected wiki endpoints (member+)
@@ -56,6 +64,22 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			adminAuth.PUT("/articles/:id", handler.UpdateArticle)
 			adminAuth.DELETE("/articles/:id", handler.DeleteArticle)
 			adminAuth.DELETE("/wiki/:id", handler.DeleteWikiPage)
+		}
+
+		// Admin survey endpoints
+		adminSurveys := api.Group("/admin/surveys")
+		adminSurveys.Use(middleware.Auth(cfg.JWTSecret), middleware.AdminOnly())
+		{
+			adminSurveys.GET("", handler.ListAdminSurveys)
+			adminSurveys.POST("", handler.CreateAdminSurvey)
+			adminSurveys.GET("/:id", handler.GetAdminSurvey)
+			adminSurveys.PUT("/:id", handler.UpdateAdminSurvey)
+			adminSurveys.POST("/:id/status", handler.UpdateSurveyStatus)
+			adminSurveys.GET("/:id/submissions", handler.ListSurveySubmissions)
+			adminSurveys.GET("/:id/submissions/:sid", handler.GetSurveySubmission)
+			adminSurveys.DELETE("/:id/submissions/:sid", handler.DeleteSurveySubmission)
+			adminSurveys.GET("/:id/stats", handler.SurveyStats)
+			adminSurveys.GET("/:id/export", handler.ExportSurveyCSV)
 		}
 	}
 

@@ -58,6 +58,41 @@ type WikiRevision struct {
 	Editor  string `gorm:"size:64" json:"editor"`
 }
 
+type Survey struct {
+	Base
+	Title       string     `gorm:"size:255;not null" json:"title"`
+	Description string     `gorm:"type:text" json:"description"`
+	IsPublic    bool       `gorm:"default:false" json:"is_public"`
+	Status      string     `gorm:"size:16;default:'draft';index" json:"status"` // draft, published, closed
+	Deadline    *time.Time `json:"deadline"`
+	CreatedBy   string     `gorm:"size:64" json:"created_by"`
+}
+
+type Question struct {
+	Base
+	SurveyID  uint   `gorm:"index;not null" json:"survey_id"`
+	Title     string `gorm:"size:500;not null" json:"title"`
+	Type      string `gorm:"size:16;not null" json:"type"` // single, multi, text, textarea
+	Required  bool   `gorm:"default:false" json:"required"`
+	Options   string `gorm:"type:text" json:"options"` // JSON 字符串数组，仅选择题使用
+	SortOrder int    `gorm:"default:0" json:"sort_order"`
+}
+
+type Submission struct {
+	Base
+	SurveyID    uint   `gorm:"index;not null;uniqueIndex:idx_submissions_survey_user" json:"survey_id"`
+	UserID      *uint  `gorm:"uniqueIndex:idx_submissions_survey_user" json:"user_id"` // 可空 = 匿名；PG 中 NULL 不参与唯一冲突，匿名可多条
+	SubmitterIP string `gorm:"size:64" json:"submitter_ip"`
+}
+
+type Answer struct {
+	Base
+	SubmissionID uint   `gorm:"index;not null" json:"submission_id"`
+	QuestionID   uint   `gorm:"index;not null" json:"question_id"`
+	ValueText    string `gorm:"type:text" json:"value_text"`    // single / text / textarea
+	ValueOptions string `gorm:"type:text" json:"value_options"` // multi，JSON 数组字符串
+}
+
 type SiteConfig struct {
 	Key       string    `gorm:"primaryKey;size:64" json:"key"`
 	Value     string    `gorm:"type:text;not null" json:"value"`
