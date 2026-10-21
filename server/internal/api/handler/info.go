@@ -13,7 +13,7 @@ func GetClubInfo(c *gin.Context) {
 		"ojUrl":       "https://oj.syuctacm.cn",
 		"githubOrg":   "https://github.com/syuctacm",
 		"stats": gin.H{
-			"ojUsers": 530,
+			"ojUsers":         530,
 			"establishedYear": 2013,
 		},
 	})

@@ -22,6 +22,12 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 		api.GET("/articles", handler.ListArticles)
 		api.GET("/articles/:id", handler.GetArticle)
 
+		// Public wiki
+		api.GET("/wiki", handler.ListWikiPages)
+		api.GET("/wiki/:id", handler.GetWikiPage)
+		api.GET("/wiki/:id/revisions", handler.ListWikiRevisions)
+		api.GET("/wiki/:id/revisions/:rid", handler.GetWikiRevision)
+
 		// Auth
 		api.POST("/auth/register", handler.Register(cfg.JWTSecret))
 		api.POST("/auth/login", handler.Login(cfg.JWTSecret))
@@ -33,6 +39,15 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			userAuth.GET("/auth/me", handler.GetMe)
 		}
 
+		// Protected wiki endpoints (member+)
+		memberAuth := api.Group("")
+		memberAuth.Use(middleware.Auth(cfg.JWTSecret), middleware.MemberPlus())
+		{
+			memberAuth.POST("/wiki", handler.CreateWikiPage)
+			memberAuth.PUT("/wiki/:id", handler.UpdateWikiPage)
+			memberAuth.POST("/wiki/:id/revert/:rid", handler.RevertWikiPage)
+		}
+
 		// Protected admin endpoints
 		adminAuth := api.Group("")
 		adminAuth.Use(middleware.Auth(cfg.JWTSecret), middleware.AdminOnly())
@@ -40,6 +55,7 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			adminAuth.POST("/articles", handler.CreateArticle)
 			adminAuth.PUT("/articles/:id", handler.UpdateArticle)
 			adminAuth.DELETE("/articles/:id", handler.DeleteArticle)
+			adminAuth.DELETE("/wiki/:id", handler.DeleteWikiPage)
 		}
 	}
 

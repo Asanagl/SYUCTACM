@@ -42,7 +42,7 @@ func Init(databaseURL string) (*gorm.DB, error) {
 	}
 
 	log.Println("[Database] PostgreSQL connected successfully, running migrations...")
-	if err := db.AutoMigrate(&model.User{}, &model.Article{}, &model.SiteConfig{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Article{}, &model.SiteConfig{}, &model.WikiPage{}, &model.WikiRevision{}); err != nil {
 		log.Printf("[Database] AutoMigrate error: %v", err)
 	}
 
