@@ -1,6 +1,15 @@
 import type {
+  AdminSurveySummary,
   Article,
+  MySurveySubmission,
   PagedResult,
+  SubmissionDetail,
+  Survey,
+  SurveyAnswerInput,
+  SurveyDetail,
+  SurveyInput,
+  SurveyStats,
+  SurveySubmission,
   User,
   WikiPage,
   WikiPageSummary,
@@ -9,6 +18,16 @@ import type {
 } from '../types'
 
 const TOKEN_KEY = 'syuctacm_token'
+
+export class ApiError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
@@ -37,8 +56,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || `请求失败 (${response.status})`)
+    const errorData: { error?: string } = await response.json().catch(() => ({}))
+    throw new ApiError(response.status, errorData.error || `请求失败 (${response.status})`)
   }
 
   return response.json()
@@ -160,4 +179,119 @@ export async function revertWikiPage(id: number, rid: number): Promise<WikiPage>
   return request<WikiPage>(`/api/v1/wiki/${id}/revert/${rid}`, {
     method: 'POST',
   })
+}
+
+// ---------- 问卷（用户侧） ----------
+
+export async function fetchSurveys(page = 1, pageSize = 20): Promise<PagedResult<Survey>> {
+  return request<PagedResult<Survey>>(`/api/v1/surveys?page=${page}&page_size=${pageSize}`)
+}
+
+export async function fetchSurvey(id: number): Promise<SurveyDetail> {
+  return request<SurveyDetail>(`/api/v1/surveys/${id}`)
+}
+
+export async function submitSurvey(
+  id: number,
+  answers: SurveyAnswerInput[]
+): Promise<{ message: string }> {
+  return request<{ message: string }>(`/api/v1/surveys/${id}/submit`, {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  })
+}
+
+// 未提交过时后端返回 404，此处归一化为 null
+export async function fetchMySurveySubmission(id: number): Promise<MySurveySubmission | null> {
+  try {
+    return await request<MySurveySubmission>(`/api/v1/surveys/${id}/my`)
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
+}
+
+// ---------- 问卷（管理侧） ----------
+
+export async function fetchAdminSurveys(): Promise<{ total: number; items: AdminSurveySummary[] }> {
+  return request<{ total: number; items: AdminSurveySummary[] }>('/api/v1/admin/surveys')
+}
+
+export async function createSurvey(data: SurveyInput): Promise<{ message: string }> {
+  return request<{ message: string }>('/api/v1/admin/surveys', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateSurvey(id: number, data: SurveyInput): Promise<{ message: string }> {
+  return request<{ message: string }>(`/api/v1/admin/surveys/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateSurveyStatus(
+  id: number,
+  action: 'publish' | 'close' | 'reopen'
+): Promise<{ message: string }> {
+  return request<{ message: string }>(`/api/v1/admin/surveys/${id}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ action }),
+  })
+}
+
+export async function fetchSurveySubmissions(
+  id: number,
+  page = 1,
+  pageSize = 20
+): Promise<PagedResult<SurveySubmission>> {
+  return request<PagedResult<SurveySubmission>>(
+    `/api/v1/admin/surveys/${id}/submissions?page=${page}&page_size=${pageSize}`
+  )
+}
+
+export async function fetchSurveySubmission(id: number, sid: number): Promise<SubmissionDetail> {
+  return request<SubmissionDetail>(`/api/v1/admin/surveys/${id}/submissions/${sid}`)
+}
+
+export async function deleteSurveySubmission(id: number, sid: number): Promise<{ message: string }> {
+  return request<{ message: string }>(`/api/v1/admin/surveys/${id}/submissions/${sid}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function fetchSurveyStats(id: number): Promise<SurveyStats> {
+  return request<SurveyStats>(`/api/v1/admin/surveys/${id}/stats`)
+}
+
+// CSV 导出：走原始 fetch（response 是文件流而非 JSON），文件名取自 Content-Disposition
+export async function exportSurveySubmissions(id: number): Promise<void> {
+  const headers = new Headers()
+  const token = getToken()
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  const response = await fetch(`/api/v1/admin/surveys/${id}/export`, { headers })
+  if (!response.ok) {
+    const errorData: { error?: string } = await response.json().catch(() => ({}))
+    throw new ApiError(response.status, errorData.error || `导出失败 (${response.status})`)
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(disposition)
+  const filename = match
+    ? decodeURIComponent(match[1].replace(/"$/, '').trim())
+    : `survey-${id}-submissions.csv`
+
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
 }

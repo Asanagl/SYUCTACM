@@ -9,6 +9,11 @@ import { WikiPageView } from './pages/WikiPageView'
 import { WikiEditPage } from './pages/WikiEditPage'
 import { WikiHistoryPage } from './pages/WikiHistoryPage'
 import { WikiRevisionPage } from './pages/WikiRevisionPage'
+import { SurveyListPage } from './pages/SurveyListPage'
+import { SurveyFillPage } from './pages/SurveyFillPage'
+import { AdminSurveyListPage } from './pages/AdminSurveyListPage'
+import { AdminSurveyEditPage } from './pages/AdminSurveyEditPage'
+import { AdminSurveySubmissionPage } from './pages/AdminSurveySubmissionPage'
 import { ArticleEditModal } from './components/ArticleEditModal'
 import { AuthModal } from './components/AuthModal'
 import { RecruitModal, HonorsModal, CalendarModal, LinksModal } from './components/InfoModals'
@@ -18,6 +23,8 @@ import type { Article, User } from './types'
 function SiteShell() {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
+  // 认证就绪标志：fetchMe settle（或无 token）后置 true，守卫须等就绪后再判定
+  const [authReady, setAuthReady] = useState(() => getToken() === null)
 
   // Modals state
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
@@ -39,6 +46,9 @@ function SiteShell() {
         if (!cancelled) setUser(res.user)
       })
       .catch(() => clearToken())
+      .finally(() => {
+        if (!cancelled) setAuthReady(true)
+      })
     return () => {
       cancelled = true
     }
@@ -107,11 +117,32 @@ function SiteShell() {
             />
             <Route path="/article/:id" element={<ArticlePage />} />
             <Route path="/wiki" element={<WikiListPage user={user} />} />
-            <Route path="/wiki/new" element={<WikiEditPage user={user} />} />
+            <Route path="/wiki/new" element={<WikiEditPage user={user} authReady={authReady} />} />
             <Route path="/wiki/:id" element={<WikiPageView user={user} />} />
-            <Route path="/wiki/:id/edit" element={<WikiEditPage user={user} />} />
+            <Route
+              path="/wiki/:id/edit"
+              element={<WikiEditPage user={user} authReady={authReady} />}
+            />
             <Route path="/wiki/:id/history" element={<WikiHistoryPage user={user} />} />
             <Route path="/wiki/:id/revisions/:rid" element={<WikiRevisionPage />} />
+            <Route path="/surveys" element={<SurveyListPage />} />
+            <Route path="/surveys/:id" element={<SurveyFillPage authReady={authReady} />} />
+            <Route
+              path="/admin/surveys"
+              element={<AdminSurveyListPage user={user} authReady={authReady} />}
+            />
+            <Route
+              path="/admin/surveys/new"
+              element={<AdminSurveyEditPage user={user} authReady={authReady} />}
+            />
+            <Route
+              path="/admin/surveys/:id"
+              element={<AdminSurveyEditPage user={user} authReady={authReady} />}
+            />
+            <Route
+              path="/admin/surveys/:id/submissions/:sid"
+              element={<AdminSurveySubmissionPage user={user} authReady={authReady} />}
+            />
             <Route
               path="*"
               element={

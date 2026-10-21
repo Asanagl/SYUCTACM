@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
-import { ExternalLink, LogIn, LogOut, PlusCircle, ShieldCheck, User as UserIcon } from 'lucide-react'
+import { ClipboardList, ExternalLink, LogIn, LogOut, PlusCircle, ShieldCheck, User as UserIcon } from 'lucide-react'
 import type { User } from '../types'
 
 interface SiteHeaderProps {
@@ -56,6 +56,9 @@ export function SiteHeader({
           <NavLink to="/wiki" className={navLinkClass}>
             Wiki
           </NavLink>
+          <NavLink to="/surveys" className={navLinkClass}>
+            问卷
+          </NavLink>
           <a
             href="https://oj.syuctacm.cn"
             target="_blank"
@@ -79,6 +82,15 @@ export function SiteHeader({
                   <PlusCircle className="w-3.5 h-3.5" />
                   发文章
                 </button>
+              )}
+              {user.role === 'admin' && (
+                <Link
+                  to="/admin/surveys"
+                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded border border-gray-300 text-[13px] text-gray-600 hover:border-[#0f766e] hover:text-[#0f766e] hover:no-underline transition-colors"
+                >
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  问卷管理
+                </Link>
               )}
               <div className="flex items-center gap-1.5 text-xs text-gray-700">
                 {user.role === 'admin' ? (
@@ -129,6 +141,9 @@ export function SiteHeader({
           </button>
           <NavLink to="/wiki" className={navLinkClass}>
             Wiki
+          </NavLink>
+          <NavLink to="/surveys" className={navLinkClass}>
+            问卷
           </NavLink>
           <a
             href="https://oj.syuctacm.cn"

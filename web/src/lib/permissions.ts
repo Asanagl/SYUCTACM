@@ -4,3 +4,8 @@ import type { User } from '../types'
 export function canWrite(user: User | null): boolean {
   return user !== null && user.role !== 'guest'
 }
+
+// 问卷管理等管理端入口仅对 admin 开放
+export function isAdmin(user: User | null): boolean {
+  return user !== null && user.role === 'admin'
+}
