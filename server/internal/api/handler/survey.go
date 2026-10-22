@@ -24,7 +24,7 @@ type SurveyQuestionReq struct {
 }
 
 type SurveyCreateReq struct {
-	Title       string              `json:"title" binding:"required,max=255"`
+	Title       string              `json:"title" binding:"required,max=200"`
 	Description string              `json:"description"`
 	IsPublic    bool                `json:"is_public"`
 	Deadline    *time.Time          `json:"deadline"`
@@ -32,7 +32,7 @@ type SurveyCreateReq struct {
 }
 
 type SurveyUpdateReq struct {
-	Title       string              `json:"title" binding:"required,max=255"`
+	Title       string              `json:"title" binding:"required,max=200"`
 	Description string              `json:"description"`
 	IsPublic    *bool               `json:"is_public"`
 	Deadline    *time.Time          `json:"deadline"`
@@ -58,6 +58,72 @@ func parseOptions(raw string) []string {
 		return []string{}
 	}
 	return opts
+}
+
+// validateSurveyQuestions 校验题目集（M5），返回空字符串表示通过，否则返回中文错误信息
+func validateSurveyQuestions(reqs []SurveyQuestionReq) string {
+	if len(reqs) < 1 {
+		return "问卷至少需要 1 道题目"
+	}
+	if len(reqs) > 100 {
+		return "问卷题目数量不能超过 100 道"
+	}
+	for i, qr := range reqs {
+		if qr.Type == "single" || qr.Type == "multi" {
+			nonEmpty := 0
+			for _, o := range qr.Options {
+				if strings.TrimSpace(o) == "" {
+					return "第 " + strconv.Itoa(i+1) + " 道题存在空选项"
+				}
+				if len(o) > 200 {
+					return "第 " + strconv.Itoa(i+1) + " 道题的选项超过 200 字"
+				}
+				nonEmpty++
+			}
+			if nonEmpty < 2 {
+				return "第 " + strconv.Itoa(i+1) + " 道选择题至少需要 2 个选项"
+			}
+			if nonEmpty > 100 {
+				return "第 " + strconv.Itoa(i+1) + " 道题的选项数量不能超过 100 个"
+			}
+		}
+	}
+	return ""
+}
+
+// questionsEqual 比较现有题目集与请求题目集是否一致（按数量与逐题 title/type/required/options/sort_order）
+func questionsEqual(existing []model.Question, reqs []SurveyQuestionReq) bool {
+	if len(existing) != len(reqs) {
+		return false
+	}
+	for i, q := range existing {
+		qr := reqs[i]
+		if q.Title != qr.Title || q.Type != qr.Type || q.Required != qr.Required || q.SortOrder != qr.SortOrder {
+			return false
+		}
+		existingOpts := parseOptions(q.Options)
+		if len(existingOpts) != len(qr.Options) {
+			return false
+		}
+		for j, o := range existingOpts {
+			if o != qr.Options[j] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// csvSanitize 防止 CSV 公式注入：单元格以 = + - @ \t \r 开头时前置单引号
+func csvSanitize(s string) string {
+	if s == "" {
+		return s
+	}
+	switch s[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + s
+	}
+	return s
 }
 
 func getLoggedInUserID(c *gin.Context) (uint, bool) {
@@ -126,6 +192,15 @@ func ListSurveys(c *gin.Context) {
 
 	_, loggedIn := getLoggedInUserID(c)
 
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 50 {
+		pageSize = 10
+	}
+
 	query := database.DB.Model(&model.Survey{}).
 		Where("status = ?", "published").
 		Where("deadline IS NULL OR deadline > ?", time.Now())
@@ -137,7 +212,8 @@ func ListSurveys(c *gin.Context) {
 	query.Count(&total)
 
 	var items []surveyListItem
-	if err := query.Order("id DESC").Find(&items).Error; err != nil {
+	offset := (page - 1) * pageSize
+	if err := query.Order("id DESC").Offset(offset).Limit(pageSize).Find(&items).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取问卷列表失败"})
 		return
 	}
@@ -147,8 +223,8 @@ func ListSurveys(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"total":     total,
-		"page":      1,
-		"page_size": 50,
+		"page":      page,
+		"page_size": pageSize,
 		"items":     items,
 	})
 }
@@ -167,7 +243,8 @@ func GetSurvey(c *gin.Context) {
 
 	_, loggedIn := getLoggedInUserID(c)
 	if !survey.IsPublic && !loggedIn {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "该问卷为非公开问卷，请先登录"})
+		// 返回 404 而非 401，避免枚举非公开问卷的存在性
+		c.JSON(http.StatusNotFound, gin.H{"error": "问卷未找到"})
 		return
 	}
 	if survey.Status != "published" && !isAdmin(c) {
@@ -198,7 +275,8 @@ func SubmitSurvey(c *gin.Context) {
 
 	userID, loggedIn := getLoggedInUserID(c)
 	if !survey.IsPublic && !loggedIn {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "该问卷为非公开问卷，请先登录"})
+		// 返回 404 而非 401，避免枚举非公开问卷的存在性
+		c.JSON(http.StatusNotFound, gin.H{"error": "问卷未找到"})
 		return
 	}
 
@@ -227,6 +305,14 @@ func SubmitSurvey(c *gin.Context) {
 	for _, a := range req.Answers {
 		if _, ok := questionMap[a.QuestionID]; !ok {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "存在不属于该问卷的题目"})
+			return
+		}
+		if len(a.ValueText) > 10000 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "答案文本过长（最多 10000 字）"})
+			return
+		}
+		if len(a.ValueOptions) > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "多选答案选项过多（最多 100 项）"})
 			return
 		}
 		answerMap[a.QuestionID] = a
@@ -477,6 +563,11 @@ func CreateAdminSurvey(c *gin.Context) {
 		return
 	}
 
+	if msg := validateSurveyQuestions(req.Questions); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
 	usernameVal, exists := c.Get("username")
 	username, ok := usernameVal.(string)
 	if !exists || !ok {
@@ -535,7 +626,12 @@ func GetAdminSurvey(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, buildSurveyDetail(&survey, questions))
+	var submissionCount int64
+	database.DB.Model(&model.Submission{}).Where("survey_id = ?", survey.ID).Count(&submissionCount)
+
+	detail := buildSurveyDetail(&survey, questions)
+	detail["submission_count"] = submissionCount
+	c.JSON(http.StatusOK, detail)
 }
 
 func UpdateAdminSurvey(c *gin.Context) {
@@ -556,6 +652,11 @@ func UpdateAdminSurvey(c *gin.Context) {
 		return
 	}
 
+	if msg := validateSurveyQuestions(req.Questions); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		return
+	}
+
 	updates := map[string]interface{}{
 		"title":       req.Title,
 		"description": req.Description,
@@ -563,6 +664,28 @@ func UpdateAdminSurvey(c *gin.Context) {
 	}
 	if req.IsPublic != nil {
 		updates["is_public"] = *req.IsPublic
+	}
+
+	// 已有提交的问卷仅允许更新元信息：改题目集会使历史答案与新题目失联，统计失真
+	var submissionCount int64
+	database.DB.Model(&model.Submission{}).Where("survey_id = ?", survey.ID).Count(&submissionCount)
+	if submissionCount > 0 {
+		var existing []model.Question
+		if err := database.DB.Where("survey_id = ?", survey.ID).Order("sort_order ASC, id ASC").Find(&existing).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取问卷题目失败"})
+			return
+		}
+		if !questionsEqual(existing, req.Questions) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "该问卷已有 " + strconv.FormatInt(submissionCount, 10) + " 份提交，修改题目会使历史统计失真；如需改题请关闭后新建问卷"})
+			return
+		}
+		if err := database.DB.Model(&survey).Updates(updates).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新问卷失败"})
+			return
+		}
+		database.DB.First(&survey, survey.ID)
+		c.JSON(http.StatusOK, buildSurveyDetail(&survey, existing))
+		return
 	}
 
 	questions := buildQuestionModels(survey.ID, req.Questions)
@@ -821,10 +944,11 @@ func DeleteSurveySubmission(c *gin.Context) {
 	}
 
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("submission_id = ?", submission.ID).Delete(&model.Answer{}).Error; err != nil {
+		if err := tx.Where("submission_id = ?", submission.ID).Unscoped().Delete(&model.Answer{}).Error; err != nil {
 			return err
 		}
-		return tx.Delete(&submission).Error
+		// 硬删除提交记录：软删行会继续占用 (survey_id, user_id) 唯一索引，导致该用户无法重新提交
+		return tx.Unscoped().Delete(&submission).Error
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除提交记录失败"})
@@ -912,13 +1036,15 @@ func SurveyStats(c *gin.Context) {
 				"answered_count": answeredCount,
 			})
 		default: // text / textarea
+			nonEmpty := 0
 			textAnswers := make([]string, 0, 100)
 			for _, a := range qAnswers {
 				if a.ValueText == "" {
 					continue
 				}
+				nonEmpty++
 				if len(textAnswers) >= 100 {
-					break
+					continue
 				}
 				textAnswers = append(textAnswers, a.ValueText)
 			}
@@ -928,6 +1054,7 @@ func SurveyStats(c *gin.Context) {
 				"type":           q.Type,
 				"required":       q.Required,
 				"text_answers":   textAnswers,
+				"text_truncated": nonEmpty > len(textAnswers),
 				"answered_count": answeredCount,
 			})
 		}
@@ -998,7 +1125,9 @@ func ExportSurveyCSV(c *gin.Context) {
 	c.Header("Content-Disposition", `attachment; filename="survey-`+strconv.FormatUint(uint64(survey.ID), 10)+`-submissions.csv"`)
 
 	// UTF-8 BOM 防止 Excel 打开乱码
-	c.Writer.Write([]byte{0xEF, 0xBB, 0xBF})
+	if _, err := c.Writer.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
+		return
+	}
 	w := csv.NewWriter(c.Writer)
 
 	header := []string{"提交时间", "提交者", "IP"}
@@ -1016,7 +1145,7 @@ func ExportSurveyCSV(c *gin.Context) {
 		}
 		row := []string{
 			s.CreatedAt.Local().Format("2006-01-02 15:04:05"),
-			submitter,
+			csvSanitize(submitter),
 			s.SubmitterIP,
 		}
 		answerByQuestion := make(map[uint]model.Answer)
@@ -1030,9 +1159,9 @@ func ExportSurveyCSV(c *gin.Context) {
 				continue
 			}
 			if q.Type == "multi" {
-				row = append(row, strings.Join(parseOptions(a.ValueOptions), "、"))
+				row = append(row, csvSanitize(strings.Join(parseOptions(a.ValueOptions), "、")))
 			} else {
-				row = append(row, a.ValueText)
+				row = append(row, csvSanitize(a.ValueText))
 			}
 		}
 		if err := w.Write(row); err != nil {
@@ -1040,4 +1169,8 @@ func ExportSurveyCSV(c *gin.Context) {
 		}
 	}
 	w.Flush()
+	if err := w.Error(); err != nil {
+		// 响应已开始流式输出，无法再改状态码，仅中止
+		return
+	}
 }
