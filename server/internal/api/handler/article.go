@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/syuctacm/syuctacm/server/internal/database"
@@ -29,6 +30,13 @@ type ArticleUpdateReq struct {
 	AuthorName string `json:"author_name"`
 }
 
+func escapeLikePattern(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
+}
+
 func ListArticles(c *gin.Context) {
 	if database.DB == nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -39,6 +47,7 @@ func ListArticles(c *gin.Context) {
 	}
 
 	category := c.Query("category")
+	search := c.Query("search")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 	if page < 1 {
@@ -51,6 +60,9 @@ func ListArticles(c *gin.Context) {
 	query := database.DB.Model(&model.Article{})
 	if category != "" {
 		query = query.Where("category = ?", category)
+	}
+	if search != "" {
+		query = query.Where("title ILIKE ? ESCAPE '\\'", "%"+escapeLikePattern(search)+"%")
 	}
 
 	var total int64
