@@ -14,11 +14,12 @@ import { SurveyFillPage } from './pages/SurveyFillPage'
 import { AdminSurveyListPage } from './pages/AdminSurveyListPage'
 import { AdminSurveyEditPage } from './pages/AdminSurveyEditPage'
 import { AdminSurveySubmissionPage } from './pages/AdminSurveySubmissionPage'
-import { ArticleEditModal } from './components/ArticleEditModal'
+import { AdminArticleListPage } from './pages/AdminArticleListPage'
+import { AdminArticleEditPage } from './pages/AdminArticleEditPage'
 import { AuthModal } from './components/AuthModal'
 import { RecruitModal, HonorsModal, CalendarModal, LinksModal } from './components/InfoModals'
-import { clearToken, createArticle, fetchMe, getToken, updateArticle } from './api/client'
-import type { Article, User } from './types'
+import { clearToken, fetchMe, getToken } from './api/client'
+import type { User } from './types'
 
 function SiteShell() {
   const navigate = useNavigate()
@@ -27,10 +28,6 @@ function SiteShell() {
   const [authReady, setAuthReady] = useState(() => getToken() === null)
 
   // Modals state
-  const [editingArticle, setEditingArticle] = useState<Article | null>(null)
-  const [editModalKey, setEditModalKey] = useState(0)
-  const [articlesRefreshKey, setArticlesRefreshKey] = useState(0)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isRecruitOpen, setIsRecruitOpen] = useState(false)
   const [isHonorsOpen, setIsHonorsOpen] = useState(false)
@@ -58,34 +55,6 @@ function SiteShell() {
     navigate('/', { state: { category: category ?? '', scrollToArticles: true } })
   }
 
-  const openCreateArticle = () => {
-    setEditingArticle(null)
-    setEditModalKey((k) => k + 1)
-    setIsEditModalOpen(true)
-  }
-
-  const openEditArticle = (article: Article) => {
-    setEditingArticle(article)
-    setEditModalKey((k) => k + 1)
-    setIsEditModalOpen(true)
-  }
-
-  const handleSaveArticle = async (data: {
-    title: string
-    category: 'news' | 'notice' | 'senior' | 'contest'
-    summary: string
-    content: string
-    is_pinned: boolean
-    author_name?: string
-  }) => {
-    if (editingArticle) {
-      await updateArticle(editingArticle.id, data)
-    } else {
-      await createArticle(data)
-    }
-    setArticlesRefreshKey((k) => k + 1)
-  }
-
   const handleLogout = () => {
     clearToken()
     setUser(null)
@@ -97,7 +66,6 @@ function SiteShell() {
       <SiteHeader
         user={user}
         onOpenAuth={() => setIsAuthModalOpen(true)}
-        onOpenCreateArticle={openCreateArticle}
         onLogout={handleLogout}
         onNavigateArticles={handleNavigateArticles}
       />
@@ -105,16 +73,7 @@ function SiteShell() {
       <main className="flex-1 w-full">
         <div className="max-w-[880px] mx-auto px-5">
           <Routes>
-            <Route
-              path="/"
-              element={
-                <HomePage
-                  user={user}
-                  onEditArticle={openEditArticle}
-                  refreshKey={articlesRefreshKey}
-                />
-              }
-            />
+            <Route path="/" element={<HomePage />} />
             <Route path="/article/:id" element={<ArticlePage />} />
             <Route path="/wiki" element={<WikiListPage user={user} />} />
             <Route path="/wiki/new" element={<WikiEditPage user={user} authReady={authReady} />} />
@@ -144,14 +103,20 @@ function SiteShell() {
               element={<AdminSurveySubmissionPage user={user} authReady={authReady} />}
             />
             <Route
+              path="/admin/articles"
+              element={<AdminArticleListPage user={user} authReady={authReady} />}
+            />
+            <Route
+              path="/admin/articles/new"
+              element={<AdminArticleEditPage user={user} authReady={authReady} />}
+            />
+            <Route
+              path="/admin/articles/:id/edit"
+              element={<AdminArticleEditPage user={user} authReady={authReady} />}
+            />
+            <Route
               path="*"
-              element={
-                <HomePage
-                  user={user}
-                  onEditArticle={openEditArticle}
-                  refreshKey={articlesRefreshKey}
-                />
-              }
+              element={<HomePage />}
             />
           </Routes>
         </div>
@@ -162,15 +127,6 @@ function SiteShell() {
         onOpenHonors={() => setIsHonorsOpen(true)}
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenLinks={() => setIsLinksOpen(true)}
-      />
-
-      {/* Modals：key 保证每次打开时表单状态按 article 重新初始化 */}
-      <ArticleEditModal
-        key={editModalKey}
-        article={editingArticle}
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleSaveArticle}
       />
 
       <AuthModal
