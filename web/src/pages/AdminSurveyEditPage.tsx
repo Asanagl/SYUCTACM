@@ -11,7 +11,7 @@ import {
   createSurvey,
   deleteSurveySubmission,
   exportSurveySubmissions,
-  fetchSurvey,
+  fetchAdminSurvey,
   fetchSurveyStats,
   fetchSurveySubmissions,
   updateSurvey,
@@ -91,19 +91,21 @@ export function AdminSurveyEditPage({ user, authReady }: AdminSurveyEditPageProp
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [submissionCount, setSubmissionCount] = useState(0)
 
-  // ---- 问卷基本信息与题目加载（编辑模式） ----
+  // ---- 问卷基本信息与题目加载（编辑模式，走管理端点） ----
   useEffect(() => {
     if (isNew) return
     let cancelled = false
     ;(async () => {
       try {
-        const data = await fetchSurvey(surveyId)
+        const data = await fetchAdminSurvey(surveyId)
         if (cancelled) return
         setTitle(data.title)
         setDescription(data.description)
         setIsPublic(data.is_public)
         setDeadline(toDatetimeLocal(data.deadline))
+        setSubmissionCount(data.submission_count ?? 0)
         setQuestions(
           data.questions
             .slice()
@@ -294,6 +296,7 @@ export function AdminSurveyEditPage({ user, authReady }: AdminSurveyEditPageProp
   }
 
   const submissionsTotalPages = Math.max(1, Math.ceil(submissionsTotal / SUBMISSION_PAGE_SIZE))
+  const questionsLocked = !isNew && submissionCount > 0
 
   return (
     <div className="py-7">
@@ -422,13 +425,19 @@ export function AdminSurveyEditPage({ user, authReady }: AdminSurveyEditPageProp
               <button
                 type="button"
                 onClick={addQuestion}
-                className="inline-flex items-center gap-1 text-[12.5px] px-2.5 py-1 rounded border border-[#0f766e] text-[#0f766e] hover:bg-[#0f766e] hover:text-white transition-colors cursor-pointer"
+                disabled={questionsLocked}
+                className="inline-flex items-center gap-1 text-[12.5px] px-2.5 py-1 rounded border border-[#0f766e] text-[#0f766e] hover:bg-[#0f766e] hover:text-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
               >
                 <Plus className="w-3.5 h-3.5" />
                 添加题目
               </button>
             </div>
-
+            {questionsLocked && (
+              <div className="p-3 rounded bg-amber-50 border border-amber-200 text-amber-700 text-xs">
+                已有 {submissionCount} 份提交，题目已锁定：修改题目会使历史统计失真；如需改题请关闭后新建问卷。
+              </div>
+            )}
+            <fieldset disabled={questionsLocked} className="contents">
             {questions.map((q, index) => (
               <div key={q.key} className="border border-[#e5e7eb] rounded p-4 flex flex-col gap-3">
                 <div className="flex items-center gap-2">
@@ -516,6 +525,7 @@ export function AdminSurveyEditPage({ user, authReady }: AdminSurveyEditPageProp
                 )}
               </div>
             ))}
+            </fieldset>
           </div>
 
           <div className="flex items-center gap-3 pt-1">
@@ -707,6 +717,9 @@ function QuestionStatsCard({
                 </li>
               ))}
             </ul>
+          )}
+          {question.text_truncated && (
+            <p className="mt-2 text-[12px] text-gray-400">仅显示前 100 条，更多请导出 CSV 查看</p>
           )}
         </div>
       )}

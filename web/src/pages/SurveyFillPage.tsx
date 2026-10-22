@@ -55,7 +55,16 @@ export function SurveyFillPage({ authReady }: SurveyFillPageProps) {
               setAnswers((prev) => {
                 const next = { ...prev }
                 for (const a of mine.answers) {
-                  next[a.question_id] = { text: a.value_text ?? '', options: a.value_options ?? [] }
+                  const q = data.questions.find((qq) => qq.id === a.question_id)
+                  if (q && q.type === 'single') {
+                    // 单选答案走 value_text，映射回 radio 选中态
+                    next[a.question_id] = { text: '', options: a.value_text ? [a.value_text] : [] }
+                  } else {
+                    next[a.question_id] = {
+                      text: a.value_text ?? '',
+                      options: a.value_options ?? [],
+                    }
+                  }
                 }
                 return next
               })
@@ -179,6 +188,10 @@ export function SurveyFillPage({ authReady }: SurveyFillPageProps) {
     try {
       const payload = detail.questions.map((q) => {
         const a = answers[q.id] ?? { text: '', options: [] }
+        // 单选协议：选中项放 value_text；多选：value_options 数组；填空：value_text
+        if (q.type === 'single') {
+          return { question_id: q.id, value_text: a.options[0] ?? '' }
+        }
         if (q.type === 'text' || q.type === 'textarea') {
           return { question_id: q.id, value_text: a.text.trim() }
         }

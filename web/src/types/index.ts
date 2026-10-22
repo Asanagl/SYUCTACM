@@ -109,6 +109,11 @@ export interface AdminSurveySummary extends Survey {
   submission_count: number
 }
 
+// 管理端单卷详情：结构同公开 detail，附带提交数（用于编辑保护与展示）
+export interface AdminSurveyDetail extends SurveyDetail {
+  submission_count: number
+}
+
 export interface SurveyQuestionInput {
   title: string
   type: QuestionType
@@ -159,6 +164,8 @@ export interface SurveyQuestionStat {
   required: boolean
   options: SurveyOptionStat[]
   text_answers: string[]
+  // 填空题原文超过 100 条时后端截断并置 true；字段不存在表示未截断（向后兼容）
+  text_truncated?: boolean
 }
 
 export interface SurveyStats {

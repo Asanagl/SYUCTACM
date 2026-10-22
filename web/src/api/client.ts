@@ -1,4 +1,5 @@
 import type {
+  AdminSurveyDetail,
   AdminSurveySummary,
   Article,
   MySurveySubmission,
@@ -215,6 +216,11 @@ export async function fetchMySurveySubmission(id: number): Promise<MySurveySubmi
 
 export async function fetchAdminSurveys(): Promise<{ total: number; items: AdminSurveySummary[] }> {
   return request<{ total: number; items: AdminSurveySummary[] }>('/api/v1/admin/surveys')
+}
+
+// 管理端单卷详情（含题目与提交数），编辑页加载结构用，不依赖公开端点的可见性规则
+export async function fetchAdminSurvey(id: number): Promise<AdminSurveyDetail> {
+  return request<AdminSurveyDetail>(`/api/v1/admin/surveys/${id}`)
 }
 
 export async function createSurvey(data: SurveyInput): Promise<{ message: string }> {
