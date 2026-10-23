@@ -12,6 +12,7 @@ import type {
   SurveyStats,
   SurveySubmission,
   User,
+  WeatherInfo,
   WikiPage,
   WikiPageSummary,
   WikiRevision,
@@ -86,6 +87,10 @@ export async function fetchArticles(
 export async function fetchArticle(id: number, opts?: { manage?: boolean }): Promise<Article> {
   const suffix = opts?.manage ? '?manage=1' : ''
   return request<Article>(`/api/v1/articles/${id}${suffix}`)
+}
+
+export async function fetchWeather(): Promise<WeatherInfo> {
+  return request<WeatherInfo>('/api/v1/weather')
 }
 
 export async function createArticle(data: {

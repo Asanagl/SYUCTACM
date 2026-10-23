@@ -172,3 +172,10 @@ export interface SurveyStats {
   total_submissions: number
   questions: SurveyQuestionStat[]
 }
+
+export interface WeatherInfo {
+  temperature: number
+  text: string
+  fetched_at: string
+  cached: boolean
+}
