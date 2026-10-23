@@ -83,8 +83,9 @@ export async function fetchArticles(
   return request<{ total: number; items: Article[] }>(`/api/v1/articles${query ? `?${query}` : ''}`)
 }
 
-export async function fetchArticle(id: number): Promise<Article> {
-  return request<Article>(`/api/v1/articles/${id}`)
+export async function fetchArticle(id: number, opts?: { manage?: boolean }): Promise<Article> {
+  const suffix = opts?.manage ? '?manage=1' : ''
+  return request<Article>(`/api/v1/articles/${id}${suffix}`)
 }
 
 export async function createArticle(data: {

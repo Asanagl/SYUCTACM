@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Eye, Save } from 'lucide-react'
 import { createArticle, fetchArticle, updateArticle } from '../api/client'
+import { CATEGORY_OPTIONS } from '../lib/categories'
 import { MarkdownContent } from '../components/MarkdownContent'
 import { isAdmin } from '../lib/permissions'
 import type { User } from '../types'
@@ -39,7 +40,7 @@ export function AdminArticleEditPage({ user, authReady }: AdminArticleEditPagePr
     let cancelled = false
     ;(async () => {
       try {
-        const article = await fetchArticle(editingId)
+        const article = await fetchArticle(editingId, { manage: true })
         if (!cancelled) {
           setTitle(article.title)
           setCategory(article.category)
@@ -149,10 +150,11 @@ export function AdminArticleEditPage({ user, authReady }: AdminArticleEditPagePr
               onChange={(e) => setCategory(e.target.value as ArticleCategory)}
               className={inputClass}
             >
-              <option value="news">新闻动态</option>
-              <option value="notice">集训通知</option>
-              <option value="contest">竞赛喜报</option>
-              <option value="senior">薪火相传</option>
+              {CATEGORY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>

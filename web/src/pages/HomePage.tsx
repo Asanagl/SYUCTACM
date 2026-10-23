@@ -2,23 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { CloudSun } from 'lucide-react'
 import { fetchArticles } from '../api/client'
+import { CATEGORY_FILTER_OPTIONS as CATEGORIES, CATEGORY_LABELS } from '../lib/categories'
 import { formatDate } from '../lib/format'
 import type { Article } from '../types'
-
-const CATEGORIES = [
-  { key: '', label: '全部' },
-  { key: 'news', label: '新闻' },
-  { key: 'notice', label: '通知' },
-  { key: 'senior', label: '薪火相传' },
-  { key: 'contest', label: '选拔赛' },
-]
-
-const CATEGORY_LABELS: Record<string, string> = {
-  news: '新闻',
-  notice: '通知',
-  senior: '薪火相传',
-  contest: '选拔赛',
-}
 
 interface ArticlesLocationState {
   category?: string

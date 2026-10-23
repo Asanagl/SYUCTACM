@@ -2,15 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchArticle } from '../api/client'
 import { MarkdownContent } from '../components/MarkdownContent'
+import { CATEGORY_LABELS } from '../lib/categories'
 import { formatDate } from '../lib/format'
 import type { Article } from '../types'
-
-const CATEGORY_LABELS: Record<string, string> = {
-  news: '新闻',
-  notice: '通知',
-  senior: '薪火相传',
-  contest: '选拔赛',
-}
 
 export function ArticlePage() {
   const { id } = useParams<{ id: string }>()

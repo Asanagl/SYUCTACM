@@ -2,26 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { FilePenLine, Pin, PinOff, Plus, Trash2 } from 'lucide-react'
 import { deleteArticle, fetchArticles, updateArticle } from '../api/client'
+import { CATEGORY_FILTER_OPTIONS as CATEGORIES, CATEGORY_LABELS } from '../lib/categories'
 import { formatDateTime } from '../lib/format'
 import { isAdmin } from '../lib/permissions'
 import type { Article, User } from '../types'
 
 const PAGE_SIZE = 20
-
-const CATEGORIES = [
-  { key: '', label: '全部' },
-  { key: 'news', label: '新闻' },
-  { key: 'notice', label: '通知' },
-  { key: 'senior', label: '薪火相传' },
-  { key: 'contest', label: '选拔赛' },
-]
-
-const CATEGORY_LABELS: Record<string, string> = {
-  news: '新闻',
-  notice: '通知',
-  senior: '薪火相传',
-  contest: '选拔赛',
-}
 
 interface AdminArticleListPageProps {
   user: User | null
@@ -38,12 +24,15 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionError, setActionError] = useState('')
+  const [fetching, setFetching] = useState(false)
+  const [pendingAction, setPendingAction] = useState<number | null>(null)
 
   // 标题搜索 300ms 防抖
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setSearch(searchInput.trim())
       setPage(1)
+      setFetching(true)
     }, 300)
     return () => {
       window.clearTimeout(timer)
@@ -66,11 +55,13 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
           setTotal(res.total ?? 0)
           setError('')
           setLoading(false)
+          setFetching(false)
         }
       } catch {
         if (!cancelled) {
           setError('文章列表加载失败，请稍后重试')
           setLoading(false)
+          setFetching(false)
         }
       }
     })()
@@ -91,19 +82,28 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const handleTogglePin = async (article: Article) => {
+    if (pendingAction !== null) return
+    setPendingAction(article.id)
     setActionError('')
     try {
       await updateArticle(article.id, { ...article, is_pinned: !article.is_pinned })
+      // 与后端排序（is_pinned DESC, id DESC）保持一致的本地重排
       setArticles((prev) =>
-        prev.map((a) => (a.id === article.id ? { ...a, is_pinned: !a.is_pinned } : a))
+        prev
+          .map((a) => (a.id === article.id ? { ...a, is_pinned: !a.is_pinned } : a))
+          .sort((a, b) => Number(b.is_pinned) - Number(a.is_pinned) || b.id - a.id)
       )
     } catch (err) {
       setActionError(err instanceof Error ? err.message : '置顶状态切换失败')
+    } finally {
+      setPendingAction(null)
     }
   }
 
   const handleDelete = async (article: Article) => {
+    if (pendingAction !== null) return
     if (!window.confirm(`确定要删除文章「${article.title}」吗？此操作不可逆。`)) return
+    setPendingAction(article.id)
     setActionError('')
     try {
       await deleteArticle(article.id)
@@ -115,6 +115,8 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
       }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : '删除失败')
+    } finally {
+      setPendingAction(null)
     }
   }
 
@@ -143,6 +145,7 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
           onChange={(e) => {
             setCategory(e.target.value)
             setPage(1)
+            setFetching(true)
           }}
           className="px-3 py-1.5 rounded border border-gray-300 text-[13px] text-gray-700 focus:outline-none focus:border-[#0f766e]"
         >
@@ -159,6 +162,7 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
           placeholder="按标题搜索..."
           className="flex-1 min-w-[200px] px-3 py-1.5 rounded border border-gray-300 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0f766e]"
         />
+        {fetching && <span className="text-[12px] text-gray-400">刷新中…</span>}
       </div>
 
       {actionError && (
@@ -173,7 +177,7 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
         <div className="py-14 text-center text-gray-400 text-sm">{error}</div>
       ) : articles.length === 0 ? (
         <div className="py-14 text-center text-gray-400 text-sm">
-          {search ? '没有匹配的文章' : '暂无文章，点击右上角「新建文章」创建'}
+          {search ? '没有匹配的文章' : category ? '该分类下暂无文章' : '暂无文章，点击右上角「新建文章」创建'}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -226,7 +230,8 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
                       </Link>
                       <button
                         onClick={() => handleTogglePin(article)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-300 text-gray-600 hover:border-[#0f766e] hover:text-[#0f766e] transition-colors cursor-pointer"
+                        disabled={pendingAction === article.id}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-300 text-gray-600 hover:border-[#0f766e] hover:text-[#0f766e] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
                       >
                         {article.is_pinned ? (
                           <>
@@ -242,7 +247,8 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
                       </button>
                       <button
                         onClick={() => handleDelete(article)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-200 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors cursor-pointer"
+                        disabled={pendingAction === article.id}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-200 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
                       >
                         <Trash2 className="w-3 h-3" />
                         删除
@@ -264,14 +270,14 @@ export function AdminArticleListPage({ user, authReady }: AdminArticleListPagePr
           <div className="flex gap-2">
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page <= 1}
+              disabled={page <= 1 || fetching}
               className="px-3 py-1 rounded border border-gray-300 text-gray-600 cursor-pointer disabled:opacity-40 disabled:cursor-default hover:border-gray-400"
             >
               上一页
             </button>
             <button
               onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page >= totalPages}
+              disabled={page >= totalPages || fetching}
               className="px-3 py-1 rounded border border-gray-300 text-gray-600 cursor-pointer disabled:opacity-40 disabled:cursor-default hover:border-gray-400"
             >
               下一页
