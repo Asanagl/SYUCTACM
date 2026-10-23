@@ -6,9 +6,10 @@ import type { User } from '../types'
 
 interface WikiEditPageProps {
   user: User | null
+  authReady: boolean
 }
 
-export function WikiEditPage({ user }: WikiEditPageProps) {
+export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isNew = id === undefined
@@ -41,6 +42,11 @@ export function WikiEditPage({ user }: WikiEditPageProps) {
       cancelled = true
     }
   }, [id, isNew])
+
+  // 认证未就绪前不判定守卫，避免误判跳转
+  if (!authReady) {
+    return <div className="py-20 text-center text-gray-400 text-sm">正在加载...</div>
+  }
 
   if (!canWrite(user)) {
     // 未登录与 guest 均无写权限，统一跳回 Wiki 列表
