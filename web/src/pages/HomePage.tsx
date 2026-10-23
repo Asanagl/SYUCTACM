@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { CloudSun } from 'lucide-react'
-import { fetchArticles } from '../api/client'
+import { fetchArticles, fetchWeather } from '../api/client'
 import { CATEGORY_FILTER_OPTIONS as CATEGORIES, CATEGORY_LABELS } from '../lib/categories'
 import { formatDate } from '../lib/format'
 import type { Article } from '../types'
+
+const FALLBACK_WEATHER = '当前天气：沈阳 16.5°C 多云'
 
 interface ArticlesLocationState {
   category?: string
@@ -30,6 +32,25 @@ export function HomePage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [weatherText, setWeatherText] = useState(FALLBACK_WEATHER)
+
+  // 拉取真实天气（沈阳市铁西区），失败保持静态兜底文案
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const w = await fetchWeather()
+        if (!cancelled) {
+          setWeatherText(`当前天气：沈阳铁西 ${w.temperature.toFixed(1)}°C ${w.text}`)
+        }
+      } catch {
+        // 天气服务不可用时保留兜底文案，不影响页面
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -73,7 +94,7 @@ export function HomePage() {
         </p>
         <p className="mt-2.5 text-[13px] text-gray-500 flex flex-wrap items-center gap-1.5">
           <CloudSun className="w-3.5 h-3.5" />
-          <span>当前天气：沈阳 16.5°C 多云　|　</span>
+          <span>{weatherText}　|　</span>
           <a
             href="https://oj.syuctacm.cn"
             target="_blank"

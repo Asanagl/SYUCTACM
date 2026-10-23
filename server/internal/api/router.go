@@ -17,6 +17,7 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 		// Public general
 		api.GET("/health", handler.HealthCheck)
 		api.GET("/info", handler.GetClubInfo)
+		api.GET("/weather", handler.GetWeather)
 
 		// Public articles（OptionalAuth：识别登录身份，供 manage 参数跳过浏览计数）
 		api.GET("/articles", handler.ListArticles)
