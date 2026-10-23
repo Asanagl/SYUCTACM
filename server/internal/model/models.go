@@ -39,6 +39,8 @@ type Article struct {
 	ViewCount  int    `gorm:"default:0" json:"view_count"`
 	AuthorID   uint   `json:"author_id"`
 	AuthorName string `gorm:"size:64" json:"author_name"`
+	// 正文首图（服务端从 Markdown 提取，不落库）
+	CoverImage string `gorm:"-" json:"cover_image"`
 }
 
 type WikiPage struct {

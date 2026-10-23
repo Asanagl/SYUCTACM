@@ -60,6 +60,7 @@ export interface Article {
   view_count: number
   author_id?: number
   author_name: string
+  cover_image: string
   created_at: string
   updated_at: string
 }

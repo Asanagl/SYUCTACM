@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { CloudSun } from 'lucide-react'
 import { fetchArticles, fetchWeather } from '../api/client'
+import { ArticleCarousel } from '../components/ArticleCarousel'
 import { CATEGORY_FILTER_OPTIONS as CATEGORIES, CATEGORY_LABELS } from '../lib/categories'
 import { formatDate } from '../lib/format'
 import type { Article } from '../types'
@@ -86,6 +87,11 @@ export function HomePage() {
 
   return (
     <div className="py-7">
+      {/* 文章图库轮播（无含图文章时显示艺术字占位） */}
+      <div className="mb-6">
+        <ArticleCarousel articles={articles} />
+      </div>
+
       {/* 组织简介 */}
       <section className="text-justify">
         <p className="text-[15px] leading-[1.85] text-gray-800">

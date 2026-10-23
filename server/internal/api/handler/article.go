@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -36,6 +37,22 @@ func escapeLikePattern(s string) string {
 	s = strings.ReplaceAll(s, "%", "\\%")
 	s = strings.ReplaceAll(s, "_", "\\_")
 	return s
+}
+
+var (
+	mdImageRe   = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)[^)]*\)`)
+	htmlImageRe = regexp.MustCompile(`<img[^>]+src=["']([^"']+)["']`)
+)
+
+// extractCoverImage 提取 Markdown/HTML 正文中的第一张图片 URL
+func extractCoverImage(content string) string {
+	if m := mdImageRe.FindStringSubmatch(content); m != nil {
+		return m[1]
+	}
+	if m := htmlImageRe.FindStringSubmatch(content); m != nil {
+		return m[1]
+	}
+	return ""
 }
 
 func ListArticles(c *gin.Context) {
@@ -75,6 +92,11 @@ func ListArticles(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取文章失败"})
 		return
+	}
+
+	// 服务端提取正文首图作为轮播封面（不落库）
+	for i := range items {
+		items[i].CoverImage = extractCoverImage(items[i].Content)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
