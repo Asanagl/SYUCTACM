@@ -113,6 +113,7 @@ export function ArticleCarousel({ articles }: ArticleCarouselProps) {
                 key={article.id}
                 type="button"
                 aria-label={`第 ${i + 1} 张`}
+                aria-current={i === index}
                 onClick={() => setIndex(i)}
                 className={`h-1.5 rounded-full transition-all cursor-pointer ${
                   i === index ? 'w-4 bg-[#0f766e]' : 'w-1.5 bg-white/50 hover:bg-white/80'

@@ -40,14 +40,18 @@ func escapeLikePattern(s string) string {
 }
 
 var (
-	mdImageRe   = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)[^)]*\)`)
+	// Markdown 行内图片：支持普通 URL 与尖括号形式（后者允许空格），可选标题参数
+	mdImageRe   = regexp.MustCompile(`!\[[^\]]*\]\(\s*(?:<([^>]+)>|([^)\s]+))(?:\s+["'][^"']*["'])?\s*\)`)
 	htmlImageRe = regexp.MustCompile(`<img[^>]+src=["']([^"']+)["']`)
 )
 
 // extractCoverImage 提取 Markdown/HTML 正文中的第一张图片 URL
 func extractCoverImage(content string) string {
 	if m := mdImageRe.FindStringSubmatch(content); m != nil {
-		return m[1]
+		if m[1] != "" {
+			return m[1]
+		}
+		return m[2]
 	}
 	if m := htmlImageRe.FindStringSubmatch(content); m != nil {
 		return m[1]
