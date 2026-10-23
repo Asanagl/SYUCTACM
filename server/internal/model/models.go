@@ -30,15 +30,32 @@ type User struct {
 
 type Article struct {
 	Base
-	Title       string `gorm:"size:255;not null" json:"title"`
-	Slug        string `gorm:"size:128;index" json:"slug"`
-	Category    string `gorm:"size:64;default:'news';index" json:"category"` // news, notice, senior, contest
-	Summary     string `gorm:"size:1024" json:"summary"`
-	Content     string `gorm:"type:text;not null" json:"content"`
-	IsPinned    bool   `gorm:"default:false;index" json:"is_pinned"`
-	ViewCount   int    `gorm:"default:0" json:"view_count"`
-	AuthorID    uint   `json:"author_id"`
-	AuthorName  string `gorm:"size:64" json:"author_name"`
+	Title      string `gorm:"size:255;not null" json:"title"`
+	Slug       string `gorm:"size:128;index" json:"slug"`
+	Category   string `gorm:"size:64;default:'news';index" json:"category"` // news, notice, senior, contest
+	Summary    string `gorm:"size:1024" json:"summary"`
+	Content    string `gorm:"type:text;not null" json:"content"`
+	IsPinned   bool   `gorm:"default:false;index" json:"is_pinned"`
+	ViewCount  int    `gorm:"default:0" json:"view_count"`
+	AuthorID   uint   `json:"author_id"`
+	AuthorName string `gorm:"size:64" json:"author_name"`
+}
+
+type WikiPage struct {
+	Base
+	Title         string `gorm:"size:255;not null" json:"title"`
+	Content       string `gorm:"type:text;not null" json:"content"`
+	CreatedBy     string `gorm:"size:64" json:"created_by"`
+	UpdatedBy     string `gorm:"size:64" json:"updated_by"`
+	RevisionCount int    `gorm:"default:0" json:"revision_count"`
+}
+
+type WikiRevision struct {
+	Base
+	PageID  uint   `gorm:"index;not null" json:"page_id"`
+	Title   string `gorm:"size:255;not null" json:"title"`
+	Content string `gorm:"type:text;not null" json:"content"`
+	Editor  string `gorm:"size:64" json:"editor"`
 }
 
 type SiteConfig struct {

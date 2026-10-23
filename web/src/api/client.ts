@@ -1,4 +1,12 @@
-import type { Article, User } from '../types'
+import type {
+  Article,
+  PagedResult,
+  User,
+  WikiPage,
+  WikiPageSummary,
+  WikiRevision,
+  WikiRevisionDetail,
+} from '../types'
 
 const TOKEN_KEY = 'syuctacm_token'
 
@@ -105,4 +113,51 @@ export async function registerUser(userData: {
 
 export async function fetchMe(): Promise<{ user: User }> {
   return request<{ user: User }>('/api/v1/auth/me')
+}
+
+export async function fetchWikiPages(page = 1, pageSize = 50): Promise<PagedResult<WikiPageSummary>> {
+  return request<PagedResult<WikiPageSummary>>(
+    `/api/v1/wiki?page=${page}&page_size=${pageSize}`
+  )
+}
+
+export async function fetchWikiPage(id: number): Promise<WikiPage> {
+  return request<WikiPage>(`/api/v1/wiki/${id}`)
+}
+
+export async function createWikiPage(data: { title: string; content: string }): Promise<WikiPage> {
+  return request<WikiPage>('/api/v1/wiki', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateWikiPage(
+  id: number,
+  data: { title: string; content: string }
+): Promise<WikiPage> {
+  return request<WikiPage>(`/api/v1/wiki/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteWikiPage(id: number): Promise<{ message: string }> {
+  return request<{ message: string }>(`/api/v1/wiki/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function fetchWikiRevisions(id: number): Promise<PagedResult<WikiRevision>> {
+  return request<PagedResult<WikiRevision>>(`/api/v1/wiki/${id}/revisions`)
+}
+
+export async function fetchWikiRevision(id: number, rid: number): Promise<WikiRevisionDetail> {
+  return request<WikiRevisionDetail>(`/api/v1/wiki/${id}/revisions/${rid}`)
+}
+
+export async function revertWikiPage(id: number, rid: number): Promise<WikiPage> {
+  return request<WikiPage>(`/api/v1/wiki/${id}/revert/${rid}`, {
+    method: 'POST',
+  })
 }

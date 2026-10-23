@@ -8,9 +8,9 @@ import (
 )
 
 type Config struct {
-	Port            string
-	DatabaseURL     string
-	JWTSecret       string
+	Port             string
+	DatabaseURL      string
+	JWTSecret        string
 	CORSAllowOrigins []string
 }
 

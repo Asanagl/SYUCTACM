@@ -62,3 +62,16 @@ func AdminOnly() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// MemberPlus 要求已登录且角色为 admin 或 member
+func MemberPlus() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		roleVal, exists := c.Get("role")
+		if !exists || (roleVal != "admin" && roleVal != "member") {
+			c.JSON(http.StatusForbidden, gin.H{"error": "无权操作：需要正式队员及以上权限"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

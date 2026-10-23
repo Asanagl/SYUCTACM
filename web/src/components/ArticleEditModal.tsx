@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { X, Save, Eye, Edit3 } from 'lucide-react'
-import { marked } from 'marked'
+import { MarkdownContent } from './MarkdownContent'
 import type { Article } from '../types'
 
 interface ArticleEditModalProps {
@@ -17,40 +17,18 @@ interface ArticleEditModalProps {
   }) => Promise<void>
 }
 
-export const ArticleEditModal: React.FC<ArticleEditModalProps> = ({
-  article,
-  isOpen,
-  onClose,
-  onSave,
-}) => {
-  const [title, setTitle] = useState('')
-  const [category, setCategory] = useState<'news' | 'notice' | 'senior' | 'contest'>('news')
-  const [summary, setSummary] = useState('')
-  const [content, setContent] = useState('')
-  const [isPinned, setIsPinned] = useState(false)
-  const [authorName, setAuthorName] = useState('')
+export function ArticleEditModal({ article, isOpen, onClose, onSave }: ArticleEditModalProps) {
+  const [title, setTitle] = useState(article?.title ?? '')
+  const [category, setCategory] = useState<'news' | 'notice' | 'senior' | 'contest'>(
+    article?.category ?? 'news'
+  )
+  const [summary, setSummary] = useState(article?.summary ?? '')
+  const [content, setContent] = useState(article?.content ?? '')
+  const [isPinned, setIsPinned] = useState(article?.is_pinned ?? false)
+  const [authorName, setAuthorName] = useState(article?.author_name ?? '')
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (article) {
-      setTitle(article.title || '')
-      setCategory(article.category || 'news')
-      setSummary(article.summary || '')
-      setContent(article.content || '')
-      setIsPinned(article.is_pinned || false)
-      setAuthorName(article.author_name || '')
-    } else {
-      setTitle('')
-      setCategory('news')
-      setSummary('')
-      setContent('')
-      setIsPinned(false)
-      setAuthorName('')
-    }
-    setError('')
-  }, [article, isOpen])
 
   if (!isOpen) return null
 
@@ -84,20 +62,22 @@ export const ArticleEditModal: React.FC<ArticleEditModalProps> = ({
     }
   }
 
-  const previewHtml = marked.parse(content || '*暂无内容*') as string
+  const inputClass =
+    'px-3 py-2 rounded border border-gray-300 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0f766e]'
+  const labelClass = 'text-xs font-medium text-gray-600'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-[#0c141d] border border-slate-700/80 rounded-xl shadow-2xl flex flex-col overflow-hidden text-slate-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/40 backdrop-blur-sm">
+      <div className="relative w-full max-w-4xl max-h-[90vh] bg-white border border-[#e5e7eb] rounded-lg shadow-2xl flex flex-col overflow-hidden text-gray-800">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#0e1823]">
-          <h2 className="font-bold text-base text-white flex items-center gap-2">
-            <Edit3 className="w-4 h-4 text-teal-400" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
+          <h2 className="font-bold text-base text-gray-800 flex items-center gap-2">
+            <Edit3 className="w-4 h-4 text-[#0f766e]" />
             {article ? '编辑文章' : '发布新文章'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -106,7 +86,7 @@ export const ArticleEditModal: React.FC<ArticleEditModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4">
           {error && (
-            <div className="p-3 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+            <div className="p-3 rounded bg-red-50 border border-red-200 text-red-600 text-xs">
               {error}
             </div>
           )}
@@ -114,23 +94,23 @@ export const ArticleEditModal: React.FC<ArticleEditModalProps> = ({
           {/* Title & Category Row */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="sm:col-span-3 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-300">文章标题 *</label>
+              <label className={labelClass}>文章标题 *</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="请输入文章标题..."
-                className="px-3 py-2 rounded-md bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                className={inputClass}
                 required
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-300">分类</label>
+              <label className={labelClass}>分类</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as 'news' | 'notice' | 'senior' | 'contest')}
-                className="px-3 py-2 rounded-md bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-teal-500"
+                className={inputClass}
               >
                 <option value="news">新闻动态</option>
                 <option value="notice">集训通知</option>
@@ -143,13 +123,13 @@ export const ArticleEditModal: React.FC<ArticleEditModalProps> = ({
           {/* Author & Pin Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-300">署名作者</label>
+              <label className={labelClass}>署名作者</label>
               <input
                 type="text"
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
                 placeholder="例如：集训队新闻组、14届 陈明"
-                className="px-3 py-2 rounded-md bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                className={inputClass}
               />
             </div>
 
@@ -159,9 +139,9 @@ export const ArticleEditModal: React.FC<ArticleEditModalProps> = ({
                 id="isPinnedCheck"
                 checked={isPinned}
                 onChange={(e) => setIsPinned(e.target.checked)}
-                className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500"
+                className="w-4 h-4 rounded accent-[#0f766e]"
               />
-              <label htmlFor="isPinnedCheck" className="text-xs font-medium text-slate-300 cursor-pointer">
+              <label htmlFor="isPinnedCheck" className="text-xs font-medium text-gray-600 cursor-pointer">
                 置顶该文章到首页顶部
               </label>
             </div>
@@ -169,26 +149,26 @@ export const ArticleEditModal: React.FC<ArticleEditModalProps> = ({
 
           {/* Summary */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-300">摘要简介 (1~2 句话)</label>
+            <label className={labelClass}>摘要简介 (1~2 句话)</label>
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               rows={2}
               placeholder="简要概括文章主要内容..."
-              className="px-3 py-2 rounded-md bg-slate-900 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+              className={inputClass}
             />
           </div>
 
           {/* Content (Editor / Preview Tabs) */}
           <div className="flex flex-col gap-1.5 flex-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-slate-300">正文内容 (支持 Markdown) *</label>
-              <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded border border-slate-800 text-xs">
+              <label className={labelClass}>正文内容 (支持 Markdown) *</label>
+              <div className="flex items-center gap-1 bg-gray-50 p-0.5 rounded border border-[#e5e7eb] text-xs">
                 <button
                   type="button"
                   onClick={() => setActiveTab('edit')}
-                  className={`px-2.5 py-1 rounded transition-colors ${
-                    activeTab === 'edit' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                    activeTab === 'edit' ? 'bg-[#0f766e] text-white' : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
                   编辑
@@ -196,8 +176,8 @@ export const ArticleEditModal: React.FC<ArticleEditModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('preview')}
-                  className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1 ${
-                    activeTab === 'preview' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'
+                  className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1 cursor-pointer ${
+                    activeTab === 'preview' ? 'bg-[#0f766e] text-white' : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
                   <Eye className="w-3 h-3" />
@@ -212,30 +192,33 @@ export const ArticleEditModal: React.FC<ArticleEditModalProps> = ({
                 onChange={(e) => setContent(e.target.value)}
                 rows={12}
                 placeholder="在此输入 Markdown 正文内容..."
-                className="w-full px-3 py-2.5 rounded-md bg-slate-900 border border-slate-700 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 leading-relaxed"
+                className="w-full px-3 py-2.5 rounded border border-gray-300 text-sm font-mono text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0f766e] leading-relaxed"
                 required
               />
             ) : (
-              <div
-                className="w-full p-4 rounded-md bg-slate-950 border border-slate-800 text-sm text-slate-300 min-h-[280px] overflow-y-auto space-y-3 font-light"
-                dangerouslySetInnerHTML={{ __html: previewHtml }}
-              />
+              <div className="w-full p-4 rounded border border-[#e5e7eb] text-sm min-h-[280px] overflow-y-auto bg-gray-50">
+                {content.trim() ? (
+                  <MarkdownContent content={content} />
+                ) : (
+                  <span className="text-gray-400">暂无内容</span>
+                )}
+              </div>
             )}
           </div>
 
           {/* Footer Submit */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#e5e7eb]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded border border-gray-300 text-xs text-gray-600 hover:border-gray-400 transition-colors cursor-pointer"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-md bg-teal-600 hover:bg-teal-500 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-5 py-2 rounded bg-[#0f766e] hover:bg-[#0d5f59] text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5" />
               {saving ? '正在保存...' : '保存并发布'}
