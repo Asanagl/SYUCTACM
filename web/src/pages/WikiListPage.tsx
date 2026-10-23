@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { fetchWikiPages } from '../api/client'
+import { WikiTree } from '../components/WikiTree'
 import { formatDateTime } from '../lib/format'
 import { canWrite } from '../lib/permissions'
 import type { User, WikiPageSummary } from '../types'
@@ -37,8 +38,10 @@ export function WikiListPage({ user }: WikiListPageProps) {
   }, [])
 
   return (
-    <div className="py-7">
-      <div className="flex items-end justify-between border-b border-[#e5e7eb] pb-2">
+    <div className="grid gap-8 py-7 md:grid-cols-[240px_minmax(0,1fr)]">
+      <WikiTree canCreate={canWrite(user)} />
+      <div className="min-w-0">
+        <div className="flex items-end justify-between border-b border-[#e5e7eb] pb-2">
         <h2 className="inline-block text-xl pb-1.5 border-b-2 border-gray-800 font-semibold">
           Wiki
         </h2>
@@ -84,6 +87,7 @@ export function WikiListPage({ user }: WikiListPageProps) {
           ))}
         </ul>
       )}
+      </div>
     </div>
   )
 }

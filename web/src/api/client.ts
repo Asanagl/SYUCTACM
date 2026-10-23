@@ -16,6 +16,7 @@ import type {
   WikiPageSummary,
   WikiRevision,
   WikiRevisionDetail,
+  WikiTreeItem,
 } from '../types'
 
 const TOKEN_KEY = 'syuctacm_token'
@@ -160,7 +161,11 @@ export async function fetchWikiPage(id: number): Promise<WikiPage> {
   return request<WikiPage>(`/api/v1/wiki/${id}`)
 }
 
-export async function createWikiPage(data: { title: string; content: string }): Promise<WikiPage> {
+export async function createWikiPage(data: {
+  title: string
+  content: string
+  group_name?: string
+}): Promise<WikiPage> {
   return request<WikiPage>('/api/v1/wiki', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -169,7 +174,7 @@ export async function createWikiPage(data: { title: string; content: string }): 
 
 export async function updateWikiPage(
   id: number,
-  data: { title: string; content: string }
+  data: { title: string; content: string; group_name?: string }
 ): Promise<WikiPage> {
   return request<WikiPage>(`/api/v1/wiki/${id}`, {
     method: 'PUT',
@@ -181,6 +186,10 @@ export async function deleteWikiPage(id: number): Promise<{ message: string }> {
   return request<{ message: string }>(`/api/v1/wiki/${id}`, {
     method: 'DELETE',
   })
+}
+
+export async function fetchWikiTree(): Promise<{ items: WikiTreeItem[] }> {
+  return request<{ items: WikiTreeItem[] }>('/api/v1/wiki/tree')
 }
 
 export async function fetchWikiRevisions(id: number): Promise<PagedResult<WikiRevision>> {

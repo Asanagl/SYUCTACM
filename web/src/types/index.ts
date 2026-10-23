@@ -12,11 +12,18 @@ export interface User {
 export interface WikiPageSummary {
   id: number
   title: string
+  group_name: string
   created_by: string
   updated_by: string
   created_at: string
   updated_at: string
   revision_count: number
+}
+
+export interface WikiTreeItem {
+  id: number
+  title: string
+  group_name: string
 }
 
 export interface WikiPage extends WikiPageSummary {

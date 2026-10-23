@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	"github.com/syuctacm/syuctacm/server/internal/database"
@@ -12,18 +13,26 @@ import (
 )
 
 type WikiPageReq struct {
-	Title   string `json:"title" binding:"required,max=200"`
-	Content string `json:"content" binding:"required,max=200000"`
+	Title     string `json:"title" binding:"required,max=200"`
+	Content   string `json:"content" binding:"required,max=200000"`
+	GroupName string `json:"group_name"`
 }
 
 type wikiPageListItem struct {
 	ID            uint      `json:"id"`
 	Title         string    `json:"title"`
+	GroupName     string    `json:"group_name"`
 	CreatedBy     string    `json:"created_by"`
 	UpdatedBy     string    `json:"updated_by"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	RevisionCount int       `json:"revision_count"`
+}
+
+type wikiTreeItem struct {
+	ID        uint   `json:"id"`
+	Title     string `json:"title"`
+	GroupName string `json:"group_name"`
 }
 
 type wikiRevisionListItem struct {
@@ -58,7 +67,7 @@ func ListWikiPages(c *gin.Context) {
 	var items []wikiPageListItem
 	offset := (page - 1) * pageSize
 	err := database.DB.Model(&model.WikiPage{}).
-		Select("id", "title", "created_by", "updated_by", "created_at", "updated_at", "revision_count").
+		Select("id", "title", "group_name", "created_by", "updated_by", "created_at", "updated_at", "revision_count").
 		Order("updated_at DESC").
 		Offset(offset).Limit(pageSize).
 		Find(&items).Error
@@ -72,6 +81,30 @@ func ListWikiPages(c *gin.Context) {
 		"page":      page,
 		"page_size": pageSize,
 		"items":     items,
+	})
+}
+
+func GetWikiTree(c *gin.Context) {
+	if database.DB == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"items": []wikiTreeItem{},
+		})
+		return
+	}
+
+	var items []wikiTreeItem
+	err := database.DB.Model(&model.WikiPage{}).
+		Select("id", "title", "group_name").
+		Order("group_name ASC").
+		Order("title ASC").
+		Find(&items).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取 Wiki 目录失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"items": items,
 	})
 }
 
@@ -102,6 +135,10 @@ func CreateWikiPage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误，标题和内容为必填项"})
 		return
 	}
+	if utf8.RuneCountInString(req.GroupName) > 64 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group_name 不能超过 64 字"})
+		return
+	}
 
 	usernameVal, exists := c.Get("username")
 	username, ok := usernameVal.(string)
@@ -113,6 +150,7 @@ func CreateWikiPage(c *gin.Context) {
 	wikiPage := model.WikiPage{
 		Title:         req.Title,
 		Content:       req.Content,
+		GroupName:     req.GroupName,
 		CreatedBy:     username,
 		UpdatedBy:     username,
 		RevisionCount: 1,
@@ -156,6 +194,10 @@ func UpdateWikiPage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误，标题和内容为必填项"})
 		return
 	}
+	if utf8.RuneCountInString(req.GroupName) > 64 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "group_name 不能超过 64 字"})
+		return
+	}
 
 	usernameVal, exists := c.Get("username")
 	username, ok := usernameVal.(string)
@@ -168,6 +210,7 @@ func UpdateWikiPage(c *gin.Context) {
 		if err := tx.Model(&wikiPage).Updates(map[string]interface{}{
 			"title":          req.Title,
 			"content":        req.Content,
+			"group_name":     req.GroupName,
 			"updated_by":     username,
 			"revision_count": gorm.Expr("revision_count + 1"),
 		}).Error; err != nil {

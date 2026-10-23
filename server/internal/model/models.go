@@ -45,6 +45,7 @@ type WikiPage struct {
 	Base
 	Title         string `gorm:"size:255;not null" json:"title"`
 	Content       string `gorm:"type:text;not null" json:"content"`
+	GroupName     string `gorm:"size:64;not null;default:''" json:"group_name"`
 	CreatedBy     string `gorm:"size:64" json:"created_by"`
 	UpdatedBy     string `gorm:"size:64" json:"updated_by"`
 	RevisionCount int    `gorm:"default:0" json:"revision_count"`

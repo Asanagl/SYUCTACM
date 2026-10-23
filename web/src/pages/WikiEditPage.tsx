@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { createWikiPage, fetchWikiPage, updateWikiPage } from '../api/client'
+import { createWikiPage, fetchWikiPage, fetchWikiTree, updateWikiPage } from '../api/client'
 import { canWrite } from '../lib/permissions'
 import type { User } from '../types'
 
@@ -15,7 +15,9 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
   const isNew = id === undefined
 
   const [title, setTitle] = useState('')
+  const [groupName, setGroupName] = useState('')
   const [content, setContent] = useState('')
+  const [groupOptions, setGroupOptions] = useState<string[]>([])
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -28,6 +30,7 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
         const data = await fetchWikiPage(Number(id))
         if (!cancelled) {
           setTitle(data.title)
+          setGroupName(data.group_name)
           setContent(data.content)
           setLoading(false)
         }
@@ -42,6 +45,28 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
       cancelled = true
     }
   }, [id, isNew])
+
+  // 现有分组名用于「分组」输入框的 datalist 自动补全
+  useEffect(() => {
+    if (!canWrite(user)) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetchWikiTree()
+        if (!cancelled) {
+          const names = [...new Set((res.items ?? []).map((i) => i.group_name))]
+            .filter((g) => g !== '')
+            .sort()
+          setGroupOptions(names)
+        }
+      } catch {
+        // 分组补全失败不影响编辑功能
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   // 认证未就绪前不判定守卫，避免误判跳转
   if (!authReady) {
@@ -67,8 +92,12 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
     setError('')
     try {
       const saved = isNew
-        ? await createWikiPage({ title: title.trim(), content })
-        : await updateWikiPage(Number(id), { title: title.trim(), content })
+        ? await createWikiPage({ title: title.trim(), content, group_name: groupName.trim() })
+        : await updateWikiPage(Number(id), {
+            title: title.trim(),
+            content,
+            group_name: groupName.trim(),
+          })
       navigate(`/wiki/${saved.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存失败')
@@ -106,6 +135,26 @@ export function WikiEditPage({ user, authReady }: WikiEditPageProps) {
             required
             className="px-3 py-2 rounded border border-gray-300 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0f766e]"
           />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="wiki-group" className="text-xs font-medium text-gray-600">
+            分组（可选）
+          </label>
+          <input
+            id="wiki-group"
+            type="text"
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            placeholder="留空表示未分组"
+            list="wiki-group-options"
+            className="px-3 py-2 rounded border border-gray-300 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0f766e]"
+          />
+          <datalist id="wiki-group-options">
+            {groupOptions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
         </div>
 
         <div className="flex flex-col gap-1.5">

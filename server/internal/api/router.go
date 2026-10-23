@@ -24,6 +24,7 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 
 		// Public wiki
 		api.GET("/wiki", handler.ListWikiPages)
+		api.GET("/wiki/tree", handler.GetWikiTree)
 		api.GET("/wiki/:id", handler.GetWikiPage)
 		api.GET("/wiki/:id/revisions", handler.ListWikiRevisions)
 		api.GET("/wiki/:id/revisions/:rid", handler.GetWikiRevision)
