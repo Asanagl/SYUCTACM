@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { ClipboardList, ExternalLink, FileText, LogIn, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react'
+import { ChevronDown, ClipboardList, ExternalLink, FileText, LogIn, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react'
 import type { User } from '../types'
 
 interface SiteHeaderProps {
@@ -71,48 +72,7 @@ export function SiteHeader({
         {/* User Area */}
         <div className="flex items-center gap-3">
           {user ? (
-            <div className="flex items-center gap-2.5">
-              {user.role === 'admin' && (
-                <Link
-                  to="/admin/articles"
-                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded border border-gray-300 text-[13px] text-gray-600 hover:border-[#0f766e] hover:text-[#0f766e] hover:no-underline transition-colors"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  文章管理
-                </Link>
-              )}
-              {user.role === 'admin' && (
-                <Link
-                  to="/admin/surveys"
-                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded border border-gray-300 text-[13px] text-gray-600 hover:border-[#0f766e] hover:text-[#0f766e] hover:no-underline transition-colors"
-                >
-                  <ClipboardList className="w-3.5 h-3.5" />
-                  问卷管理
-                </Link>
-              )}
-              <div className="flex items-center gap-1.5 text-xs text-gray-700">
-                {user.role === 'admin' ? (
-                  <ShieldCheck className="w-4 h-4 text-[#0f766e]" />
-                ) : (
-                  <UserIcon className="w-4 h-4 text-gray-500" />
-                )}
-                <span className="font-medium max-w-[120px] truncate">
-                  {user.nickname || user.username}
-                </span>
-                {user.role === 'admin' && (
-                  <span className="px-1 rounded text-[10px] border border-[#0f766e] text-[#0f766e]">
-                    管理员
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={onLogout}
-                title="退出登录"
-                className="p-1 rounded text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+            <UserMenu user={user} onLogout={onLogout} />
           ) : (
             <button
               onClick={onOpenAuth}
@@ -154,5 +114,100 @@ export function SiteHeader({
         </div>
       </div>
     </header>
+  )
+}
+
+interface UserMenuProps {
+  user: User
+  onLogout: () => void
+}
+
+function UserMenu({ user, onLogout }: UserMenuProps) {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // 点击外部或 Esc 关闭
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  const itemClass =
+    'flex items-center gap-2 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 hover:text-[#0f766e] hover:no-underline transition-colors'
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-gray-200 hover:border-[#0f766e] text-xs text-gray-700 transition-colors cursor-pointer"
+      >
+        {user.role === 'admin' ? (
+          <ShieldCheck className="w-4 h-4 text-[#0f766e]" />
+        ) : (
+          <UserIcon className="w-4 h-4 text-gray-500" />
+        )}
+        <span className="font-medium max-w-[120px] truncate">
+          {user.nickname || user.username}
+        </span>
+        {user.role === 'admin' && (
+          <span className="px-1 rounded text-[10px] border border-[#0f766e] text-[#0f766e]">
+            管理员
+          </span>
+        )}
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-44 rounded-md border border-[#e5e7eb] bg-white shadow-lg py-1 z-50">
+          {user.role === 'admin' && (
+            <>
+              <Link
+                to="/admin/articles"
+                onClick={() => setOpen(false)}
+                className={itemClass}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                文章管理
+              </Link>
+              <Link
+                to="/admin/surveys"
+                onClick={() => setOpen(false)}
+                className={itemClass}
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                问卷管理
+              </Link>
+              <div className="my-1 border-t border-[#e5e7eb]" />
+            </>
+          )}
+          <button
+            onClick={() => {
+              setOpen(false)
+              onLogout()
+            }}
+            className={`${itemClass} w-full text-left cursor-pointer`}
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            退出登录
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
