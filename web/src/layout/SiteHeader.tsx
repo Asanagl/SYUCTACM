@@ -1,11 +1,10 @@
 import { Link, NavLink } from 'react-router-dom'
-import { ClipboardList, ExternalLink, LogIn, LogOut, PlusCircle, ShieldCheck, User as UserIcon } from 'lucide-react'
+import { ClipboardList, ExternalLink, FileText, LogIn, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react'
 import type { User } from '../types'
 
 interface SiteHeaderProps {
   user: User | null
   onOpenAuth: () => void
-  onOpenCreateArticle: () => void
   onLogout: () => void
   onNavigateArticles: (category?: string) => void
 }
@@ -13,7 +12,6 @@ interface SiteHeaderProps {
 export function SiteHeader({
   user,
   onOpenAuth,
-  onOpenCreateArticle,
   onLogout,
   onNavigateArticles,
 }: SiteHeaderProps) {
@@ -75,13 +73,13 @@ export function SiteHeader({
           {user ? (
             <div className="flex items-center gap-2.5">
               {user.role === 'admin' && (
-                <button
-                  onClick={onOpenCreateArticle}
-                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded border border-[#0f766e] text-[13px] text-[#0f766e] hover:bg-[#0f766e] hover:text-white transition-colors cursor-pointer"
+                <Link
+                  to="/admin/articles"
+                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded border border-gray-300 text-[13px] text-gray-600 hover:border-[#0f766e] hover:text-[#0f766e] hover:no-underline transition-colors"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  发文章
-                </button>
+                  <FileText className="w-3.5 h-3.5" />
+                  文章管理
+                </Link>
               )}
               {user.role === 'admin' && (
                 <Link

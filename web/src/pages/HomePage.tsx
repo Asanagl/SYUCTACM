@@ -1,37 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { CloudSun } from 'lucide-react'
-import { fetchArticles, deleteArticle } from '../api/client'
+import { fetchArticles } from '../api/client'
+import { CATEGORY_FILTER_OPTIONS as CATEGORIES, CATEGORY_LABELS } from '../lib/categories'
 import { formatDate } from '../lib/format'
-import type { Article, User } from '../types'
-
-const CATEGORIES = [
-  { key: '', label: '全部' },
-  { key: 'news', label: '新闻' },
-  { key: 'notice', label: '通知' },
-  { key: 'senior', label: '薪火相传' },
-  { key: 'contest', label: '选拔赛' },
-]
-
-const CATEGORY_LABELS: Record<string, string> = {
-  news: '新闻',
-  notice: '通知',
-  senior: '薪火相传',
-  contest: '选拔赛',
-}
-
-interface HomePageProps {
-  user: User | null
-  onEditArticle: (article: Article) => void
-  refreshKey: number
-}
+import type { Article } from '../types'
 
 interface ArticlesLocationState {
   category?: string
   scrollToArticles?: boolean
 }
 
-export function HomePage({ user, onEditArticle, refreshKey }: HomePageProps) {
+export function HomePage() {
   const location = useLocation()
   const [category, setCategory] = useState<string>(
     () => (location.state as ArticlesLocationState | null)?.category ?? ''
@@ -55,7 +35,7 @@ export function HomePage({ user, onEditArticle, refreshKey }: HomePageProps) {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetchArticles(category || undefined)
+        const res = await fetchArticles({ category: category || undefined })
         if (!cancelled) {
           setArticles(res.items ?? [])
           setError('')
@@ -71,7 +51,7 @@ export function HomePage({ user, onEditArticle, refreshKey }: HomePageProps) {
     return () => {
       cancelled = true
     }
-  }, [category, refreshKey])
+  }, [category])
 
   // 「最新文章 / 薪火相传」导航跳转后滚动到文章区块
   useEffect(() => {
@@ -82,16 +62,6 @@ export function HomePage({ user, onEditArticle, refreshKey }: HomePageProps) {
       })
     }
   }, [location.state])
-
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('确定要删除这篇内容吗？此操作不可逆。')) return
-    try {
-      await deleteArticle(id)
-      setArticles((prev) => prev.filter((a) => a.id !== id))
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : '删除失败')
-    }
-  }
 
   return (
     <div className="py-7">
@@ -149,7 +119,7 @@ export function HomePage({ user, onEditArticle, refreshKey }: HomePageProps) {
             <div className="py-14 text-center text-gray-400 text-sm">暂无该分类的文章</div>
           ) : (
             articles.map((article) => (
-              <article key={article.id} className="py-[18px] border-b border-[#e5e7eb] group">
+              <article key={article.id} className="py-[18px] border-b border-[#e5e7eb]">
                 <h3 className="text-[17px] font-semibold flex items-start gap-2 flex-wrap">
                   {article.is_pinned && (
                     <span className="shrink-0 mt-1 inline-block text-[11px] text-[#0f766e] border border-[#0f766e] rounded px-1.5 py-0">
@@ -162,24 +132,6 @@ export function HomePage({ user, onEditArticle, refreshKey }: HomePageProps) {
                   >
                     {article.title}
                   </Link>
-                  {user?.role === 'admin' && (
-                    <span className="ml-auto flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => onEditArticle(article)}
-                        title="编辑文章"
-                        className="px-2 py-0.5 text-xs border border-gray-200 rounded text-gray-500 hover:border-[#0f766e] hover:text-[#0f766e] transition-colors cursor-pointer"
-                      >
-                        编辑
-                      </button>
-                      <button
-                        onClick={() => handleDelete(article.id)}
-                        title="删除文章"
-                        className="px-2 py-0.5 text-xs border border-gray-200 rounded text-gray-500 hover:border-red-500 hover:text-red-500 transition-colors cursor-pointer"
-                      >
-                        删除
-                      </button>
-                    </span>
-                  )}
                 </h3>
                 <div className="text-[12.5px] text-gray-500 mt-1 mb-1.5">
                   <span>{formatDate(article.created_at)}</span>

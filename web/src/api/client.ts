@@ -64,13 +64,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json()
 }
 
-export async function fetchArticles(category?: string): Promise<{ total: number; items: Article[] }> {
-  const query = category ? `?category=${encodeURIComponent(category)}` : ''
-  return request<{ total: number; items: Article[] }>(`/api/v1/articles${query}`)
+export interface FetchArticlesOptions {
+  category?: string
+  search?: string
+  page?: number
+  page_size?: number
 }
 
-export async function fetchArticle(id: number): Promise<Article> {
-  return request<Article>(`/api/v1/articles/${id}`)
+export async function fetchArticles(
+  options: FetchArticlesOptions = {}
+): Promise<{ total: number; items: Article[] }> {
+  const params = new URLSearchParams()
+  if (options.category) params.set('category', options.category)
+  if (options.search) params.set('search', options.search)
+  if (options.page) params.set('page', String(options.page))
+  if (options.page_size) params.set('page_size', String(options.page_size))
+  const query = params.toString()
+  return request<{ total: number; items: Article[] }>(`/api/v1/articles${query ? `?${query}` : ''}`)
+}
+
+export async function fetchArticle(id: number, opts?: { manage?: boolean }): Promise<Article> {
+  const suffix = opts?.manage ? '?manage=1' : ''
+  return request<Article>(`/api/v1/articles/${id}${suffix}`)
 }
 
 export async function createArticle(data: {

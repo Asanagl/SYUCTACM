@@ -3,10 +3,12 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/syuctacm/syuctacm/server/internal/database"
 	"github.com/syuctacm/syuctacm/server/internal/model"
+	"gorm.io/gorm"
 )
 
 type ArticleCreateReq struct {
@@ -29,6 +31,13 @@ type ArticleUpdateReq struct {
 	AuthorName string `json:"author_name"`
 }
 
+func escapeLikePattern(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
+}
+
 func ListArticles(c *gin.Context) {
 	if database.DB == nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -39,6 +48,7 @@ func ListArticles(c *gin.Context) {
 	}
 
 	category := c.Query("category")
+	search := c.Query("search")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 	if page < 1 {
@@ -51,6 +61,9 @@ func ListArticles(c *gin.Context) {
 	query := database.DB.Model(&model.Article{})
 	if category != "" {
 		query = query.Where("category = ?", category)
+	}
+	if search != "" {
+		query = query.Where("title ILIKE ? ESCAPE '\\'", "%"+escapeLikePattern(search)+"%")
 	}
 
 	var total int64
@@ -85,9 +98,14 @@ func GetArticle(c *gin.Context) {
 		return
 	}
 
-	// Increment view count
-	database.DB.Model(&article).UpdateColumn("view_count", article.ViewCount+1)
-	article.ViewCount++
+	// Increment view count（manage=1 且调用者为 admin 时跳过：管理后台编辑回填不应抬高公开浏览量）
+	// 注意：用 SQL 原子自增而非读值回写——GORM 的 UpdateColumn 会把值回写进结构体，
+	// 叠加强对结构体的 ++ 会导致响应值比实际多 1（main 分支既有问题）
+	skipViewCount := c.Query("manage") == "1" && isAdmin(c)
+	if !skipViewCount {
+		database.DB.Model(&article).UpdateColumn("view_count", gorm.Expr("view_count + 1"))
+		article.ViewCount++
+	}
 
 	c.JSON(http.StatusOK, article)
 }
