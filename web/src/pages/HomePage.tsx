@@ -41,7 +41,7 @@ export function HomePage() {
       try {
         const w = await fetchWeather()
         if (!cancelled) {
-          setWeatherText(`当前天气：沈阳铁西 ${w.temperature}°C ${w.text}`)
+          setWeatherText(`当前天气：沈阳铁西 ${w.temperature.toFixed(1)}°C ${w.text}`)
         }
       } catch {
         // 天气服务不可用时保留兜底文案，不影响页面
