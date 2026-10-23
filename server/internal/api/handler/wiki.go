@@ -92,7 +92,7 @@ func GetWikiTree(c *gin.Context) {
 		return
 	}
 
-	var items []wikiTreeItem
+	items := make([]wikiTreeItem, 0)
 	err := database.DB.Model(&model.WikiPage{}).
 		Select("id", "title", "group_name").
 		Order("group_name ASC").
