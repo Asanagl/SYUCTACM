@@ -117,7 +117,6 @@ export function SiteHeader({
   )
 }
 
-
 interface UserMenuProps {
   user: User
   onLogout: () => void
@@ -153,7 +152,6 @@ function UserMenu({ user, onLogout }: UserMenuProps) {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
         aria-expanded={open}
         className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-gray-200 hover:border-[#0f766e] text-xs text-gray-700 transition-colors cursor-pointer"
       >
@@ -176,15 +174,11 @@ function UserMenu({ user, onLogout }: UserMenuProps) {
       </button>
 
       {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-full mt-1.5 w-44 rounded-md border border-[#e5e7eb] bg-white shadow-lg py-1 z-50"
-        >
+        <div className="absolute right-0 top-full mt-1.5 w-44 rounded-md border border-[#e5e7eb] bg-white shadow-lg py-1 z-50">
           {user.role === 'admin' && (
             <>
               <Link
                 to="/admin/articles"
-                role="menuitem"
                 onClick={() => setOpen(false)}
                 className={itemClass}
               >
@@ -193,7 +187,6 @@ function UserMenu({ user, onLogout }: UserMenuProps) {
               </Link>
               <Link
                 to="/admin/surveys"
-                role="menuitem"
                 onClick={() => setOpen(false)}
                 className={itemClass}
               >
@@ -204,7 +197,6 @@ function UserMenu({ user, onLogout }: UserMenuProps) {
             </>
           )}
           <button
-            role="menuitem"
             onClick={() => {
               setOpen(false)
               onLogout()
